@@ -13,16 +13,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Karla:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/site.css?v=20260913-1">
 </head>
 <body>
 
-<a class="skip" href="#work">Skip to work</a>
+<a class="skip" href="#work">Skip to paintings</a>
 
 <nav class="nav">
   <a class="nav__mark" href="#top">Nazlı Belgin</a>
   <div class="nav__links">
-    <a href="#work">Work</a>
+    <a href="#work">Paintings</a>
+    <a href="#art-works">Art Works</a>
     <a href="#manifesto">Manifesto</a>
     <a href="#films">Films</a>
     <a href="#about">About</a>
@@ -43,7 +44,7 @@
 <section class="section" id="work">
   <div class="section__head">
     <div>
-      <h2 class="h2">Work</h2>
+      <h2 class="h2">Paintings</h2>
       <svg class="rule rule--work" viewBox="0 0 210 16" fill="none" aria-hidden="true">
         <path d="M2 11C24 5 46 12 68 8c22-4 30 5 52 2s34-7 55-3c12 2 21 6 31 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
@@ -74,6 +75,73 @@
   <input type="file" id="nb-replace-file" accept="image/*" hidden>
 </section>
 
+<section class="artworks" id="art-works" aria-labelledby="art-works-title">
+  <div class="artworks__sticky">
+    <div class="artworks__head">
+      <h2 class="h2" id="art-works-title">Art Works</h2>
+    </div>
+    <div class="artworks__viewport" id="art-works-viewport">
+      <div class="artworks__track" id="art-works-track">
+        <article class="artworks__panel artworks__panel--youtube">
+          <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
+            <summary>Youtube</summary>
+            <div class="artworks__reveal">
+              <div class="artworks__media-slot" data-youtube-slot>
+                <iframe
+                  src="https://www.youtube-nocookie.com/embed/VriyhA6ayys"
+                  title="Nazlı Belgin video on YouTube"
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen
+                ></iframe>
+              </div>
+            </div>
+          </details>
+        </article>
+
+        <article class="artworks__panel artworks__panel--spotify">
+          <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
+            <summary>Spotify</summary>
+            <div class="artworks__reveal artworks__reveal--spotify">
+              <details class="artworks__artist" data-artist-disclosure>
+                <summary>Irmak Akıncı</summary>
+                <div class="artworks__artist-gallery artworks__artist-gallery--large" aria-label="Irmak Akıncı artworks">
+                  <img src="art/ırmak/image00002.png" alt="Spotify artwork for Irmak Akıncı, 1" loading="lazy">
+                  <img src="art/ırmak/image00003.PNG" alt="Spotify artwork for Irmak Akıncı, 2" loading="lazy">
+                  <img src="art/ırmak/image00005.PNG" alt="Spotify artwork for Irmak Akıncı, 3" loading="lazy">
+                  <img src="art/ırmak/image00006.PNG" alt="Spotify artwork for Irmak Akıncı, 4" loading="lazy">
+                  <img src="art/ırmak/image00007.PNG" alt="Spotify artwork for Irmak Akıncı, 5" loading="lazy">
+                  <img src="art/ırmak/image00009.PNG" alt="Spotify artwork for Irmak Akıncı, 6" loading="lazy">
+                  <img src="art/ırmak/image00011.PNG" alt="Spotify artwork for Irmak Akıncı, 7" loading="lazy">
+                  <img src="art/ırmak/image00012.PNG" alt="Spotify artwork for Irmak Akıncı, 8" loading="lazy">
+                  <img src="art/ırmak/image00013.PNG" alt="Spotify artwork for Irmak Akıncı, 9" loading="lazy">
+                  <img src="art/ırmak/image00014.PNG" alt="Spotify artwork for Irmak Akıncı, 10" loading="lazy">
+                  <img src="art/ırmak/image00015.PNG" alt="Spotify artwork for Irmak Akıncı, 11" loading="lazy">
+                </div>
+              </details>
+              <details class="artworks__artist" data-artist-disclosure>
+                <summary>Feridun Hürel</summary>
+                <div class="artworks__artist-gallery" aria-label="Feridun Hürel artworks">
+                  <img src="art/feridun/image00001.png" alt="Spotify artwork for Feridun Hürel, 1" loading="lazy">
+                  <img src="art/feridun/image00010.png" alt="Spotify artwork for Feridun Hürel, 2" loading="lazy">
+                </div>
+              </details>
+              <details class="artworks__artist" data-artist-disclosure>
+                <summary>Hümeyra</summary>
+                <div class="artworks__artist-gallery" aria-label="Hümeyra artworks">
+                  <img src="art/hümeyra/image00004.png" alt="Spotify artwork for Hümeyra, 1" loading="lazy">
+                  <img src="art/hümeyra/image00008.png" alt="Spotify artwork for Hümeyra, 2" loading="lazy">
+                </div>
+              </details>
+            </div>
+          </details>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="section manifesto" id="manifesto">
   <svg class="rule rule--manifesto" viewBox="0 0 600 40" fill="none" aria-hidden="true">
     <path d="M4 22c40-16 62 14 100 6s52-24 92-16 58 26 98 18 54-22 94-16 46 18 84 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
@@ -94,7 +162,41 @@
 
 <section class="section" id="films">
   <h2 class="h2 h2--spaced">Films</h2>
-  <div class="films" id="films-grid"></div>
+  <div class="films" id="films-grid">
+    <article class="film" data-reveal="f0">
+      <div class="frame frame--film">
+        <video
+          class="film__video"
+          src="art/films/Dream%208.mp4"
+          aria-label="Dream 8"
+          autoplay muted loop playsinline controls
+          preload="metadata"
+        ></video>
+      </div>
+    </article>
+    <article class="film" data-reveal="f1">
+      <div class="frame frame--film">
+        <video
+          class="film__video"
+          src="art/films/Single%202%20canvas.mp4"
+          aria-label="Single 2 canvas"
+          autoplay muted loop playsinline controls
+          preload="metadata"
+        ></video>
+      </div>
+    </article>
+    <article class="film" data-reveal="f2">
+      <div class="frame frame--film">
+        <video
+          class="film__video"
+          src="art/films/Single%205%20canvas.mp4"
+          aria-label="Single 5 canvas"
+          autoplay muted loop playsinline controls
+          preload="metadata"
+        ></video>
+      </div>
+    </article>
+  </div>
 </section>
 
 <section class="section" id="about">
@@ -219,6 +321,7 @@
   </div>
 </div>
 
-<script src="js/site.js"></script>
+<script src="js/art-works-scroll.js?v=20260913-1"></script>
+<script src="js/site.js?v=20260913-1"></script>
 </body>
 </html>

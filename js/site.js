@@ -82,13 +82,6 @@
 
   var SERIES_ORDER = ['All', 'Monsters', 'Evolution', 'Stone Hills'];
 
-  var FILMS = [
-    { title: 'Underpainting',                  desc: 'Forty minutes of blue going down, cut to four.',            meta: '2025 · 4:12', placeholder: 'Film still' },
-    { title: 'The Beasts Knew Better',         desc: 'A canvas argued with for three weeks, in reverse.',         meta: '2024 · 6:40', placeholder: 'Film still' },
-    { title: 'Stone Hills (Field Recording)',  desc: 'Walking the quarry road that the series keeps returning to.', meta: '2024 · 9:03', placeholder: 'Film still' },
-    { title: 'Studio, Thursday',               desc: 'Nothing happens. Then the teeth happen.',                   meta: '2023 · 2:58', placeholder: 'Film still' }
-  ];
-
   function buildWorks() {
     return CATALOGUE.map(function (r, i) {
       return assign({}, r, { id: 'w' + i });
@@ -401,29 +394,6 @@
     });
 
     watch($('works-grid'));
-  }
-
-  /* ---------- films ---------- */
-
-  function renderFilms() {
-    $('films-grid').innerHTML = FILMS.map(function (f, n) {
-      return '<article class="film' + (seen['f' + n] ? ' is-in' : '') +
-               '" data-reveal="f' + n + '">' +
-               '<div class="frame frame--film">' +
-                 '<div class="slot">' + esc(f.placeholder) + '</div>' +
-                 '<div class="film__play">' +
-                   '<svg viewBox="0 0 64 64" aria-hidden="true">' +
-                     '<circle cx="32" cy="32" r="30" fill="none" stroke="#F2EDE3" stroke-width="1.2" opacity="0.9"/>' +
-                     '<path d="M26 21l19 11-19 11z" fill="#F2EDE3"/>' +
-                   '</svg>' +
-                 '</div>' +
-               '</div>' +
-               '<h3 class="film__title">' + esc(f.title) + '</h3>' +
-               '<p class="film__desc">' + esc(f.desc) + '</p>' +
-               '<p class="film__meta">' + esc(f.meta) + '</p>' +
-             '</article>';
-    }).join('');
-    watch($('films-grid'));
   }
 
   /* ---------- lightbox ---------- */
@@ -856,7 +826,7 @@
 
     $('year').textContent = String(new Date().getFullYear());
 
-    renderFilms();
+    watch($('films-grid'));
     render();
     wire();
     startSlides();
