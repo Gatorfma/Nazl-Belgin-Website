@@ -56,7 +56,7 @@
       <span class="filters__label">Series</span>
       <div class="filters__set" id="series-filters"></div>
     </div>
-    <div class="filters__group">
+    <div class="filters__group" id="year-group" hidden>
       <span class="filters__label">Year</span>
       <div class="filters__set" id="year-filters"></div>
     </div>
@@ -79,12 +79,16 @@
     <path d="M4 22c40-16 62 14 100 6s52-24 92-16 58 26 98 18 54-22 94-16 46 18 84 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
   </svg>
   <div class="manifesto__body">
-    <p class="mf mf--lead">I do not invent the monsters.</p>
-    <p class="mf mf--right">They are already in the room. Blue arrives first, then the teeth, then the apology.</p>
-    <p class="mf mf--blue">Severity is a kind of tenderness that ran out of time.</p>
-    <p class="mf mf--center">A painting is finished when the creature stops asking to be prettier.</p>
-    <p class="mf mf--close">Chaos, then care. Never the other way around.</p>
-    <p class="mf mf--stamp">Istanbul, 2025</p>
+    <p class="manifesto__beat manifesto__beat--lead">I search for what lies beneath the surface.<br>I speak of the wound, not of beauty.</p>
+    <p class="manifesto__beat manifesto__beat--protest manifesto__beat--right">Color is my protest; form, my act of defiance.<br>I hold instinct, not the brush.<br>I use paint to release the voice that gathers inside me.</p>
+    <p class="manifesto__beat manifesto__beat--assault">Art is not therapy, not decor, and never an investment.<br>Art is an assault.</p>
+    <p class="manifesto__beat manifesto__beat--rebellion">It is a silent rebellion against numbness, against the aesthetic lie of capital, against sterilized taste.</p>
+    <p class="manifesto__beat manifesto__beat--subconscious manifesto__beat--right">I paint not on the white walls of museums, but on the dark subconscious of humanity.<br>History still writhes beneath my skin — I bring that voice to the surface with paint.</p>
+    <p class="manifesto__beat manifesto__beat--truth">I am raw because I am honest.<br>I am flawed because I am alive.</p>
+    <p class="manifesto__beat manifesto__beat--creation">Creation is not divine imitation — it is the instinct to survive.<br>That is why my figures scream, my eyes blaze, my body distorts.</p>
+    <p class="manifesto__beat manifesto__beat--resistance manifesto__beat--right">In my art, form is not evolution — it is resistance.<br>I belong nowhere.</p>
+    <p class="manifesto__beat manifesto__beat--stone">I paint the inner eruption that has burned since the Stone Age.<br>As I look at the walls of the past, I tear down the walls of the present.</p>
+    <p class="manifesto__beat manifesto__beat--close manifesto__beat--right">For me, art is not rebirth — it is renewed attack.</p>
   </div>
 </section>
 
@@ -95,17 +99,23 @@
 
 <section class="section" id="about">
   <div class="about">
-    <div class="about__portrait">
-      <div class="frame frame--portrait">
-        <div class="slot">Portrait</div>
+    <div class="about__opening">
+      <div class="about__intro">
+        <h2 class="h2 h2--tight">Biography</h2>
+        <p class="bio-beat bio-beat--lead">Nazlı Belgin was born in 1985 in Tekirdağ, Turkey, and has been interested in art since childhood.</p>
       </div>
-      <p class="caption-sm">Studio, Kadıköy — 2025</p>
+      <figure class="about__portrait">
+        <div class="frame frame--portrait">
+          <img class="about__portrait-img" src="art/portrait/nazlı.jpg" alt="Portrait of Nazlı Belgin" width="1929" height="2411">
+        </div>
+      </figure>
     </div>
-    <div class="about__bio">
-      <h2 class="h2 h2--tight">Biography</h2>
-      <p class="prose">Nazlı Belgin (b. 1984, Izmir) paints creatures that behave badly and mean well. Working in oil, ink, graphite and pastel, she builds figures out of flat, unembarrassed colour — ultramarine grounds, cadmium bodies, a red that refuses to sit still.</p>
-      <p class="prose">Her work circles three long series: <em>Monsters</em>, <em>Evolution</em> and <em>Stone Hills</em> — inheritance, appetite, and the landscape that outlasts both. Text often surfaces in the paint, written quickly, as if the picture were still arguing with itself.</p>
-      <p class="prose">She lives and works in Istanbul.</p>
+    <div class="about__story">
+      <p class="bio-beat bio-beat--origin">Her journey began by shaping clay figures at an early age and evolved into her first sculptural experience during high school with the support of her art teacher; the sculpture they created together is still exhibited in the schoolyard.</p>
+      <p class="bio-beat bio-beat--path">Despite her passion for art, she pursued a degree in Business Administration at the Faculty of Economics and Administrative Sciences following her family’s guidance and later completed her master’s degree in the same field. After a brief career in the banking sector, she left the corporate world to dedicate herself fully to art.</p>
+      <p class="bio-beat bio-beat--pivot">She founded her own art school and later enrolled in the Faculty of Fine Arts, Department of Painting, graduating at the top of her class.</p>
+      <p class="bio-beat bio-beat--practice">Based in Ankara, Belgin continues her artistic production under the roof of Historia Art Studio. Her work is inspired by human history, mythology, and the visual potential of scientific thought. She uses color and form as expressive tools, creating a visual language that is both intuitive and reflective. In her recent works, hybrid figures combining human and animal forms appear in ironic and sometimes grotesque scenes.</p>
+      <p class="bio-beat bio-beat--close">Nazlı Belgin continues to produce within the field of contemporary art, combining personal experience with historical, scientific, and social layers.</p>
     </div>
   </div>
 
@@ -113,29 +123,29 @@
     <div>
       <h3 class="h3">Selected Exhibitions</h3>
       <div class="cv__list">
-        <div class="cv__row"><span class="cv__year">2026</span><span class="cv__text">Too Horny to Die — Galeri Nev, Istanbul (solo, forthcoming)</span></div>
-        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Common Descent — Arter, Istanbul</span></div>
-        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Soft Monsters — Sperling, Munich (solo)</span></div>
-        <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Painting After Language — Salt Beyoğlu, Istanbul</span></div>
-        <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Stone Hills — Öktem Aykut, Istanbul (solo)</span></div>
-        <div class="cv__row"><span class="cv__year">2023</span><span class="cv__text">17th Istanbul Biennial, public programme</span></div>
-        <div class="cv__row"><span class="cv__year">2022</span><span class="cv__text">Figures That Refuse — Zilberman, Berlin</span></div>
-        <div class="cv__row"><span class="cv__year">2021</span><span class="cv__text">New Painting from Turkey — Pi Artworks, London</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Stone Hills Zero — Espacio Gallery, London (solo)</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Gözlerimi Kapadım — H Art Project Galeri (group exhibition)</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">International Art &amp; Design Group Exhibition — Art Factor Gallery</span></div>
+        <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Eve Dönüş — H Art Project Galeri (group exhibition)</span></div>
+        <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">Kutnularda Gaziantep — Gaziantep (group exhibition)</span></div>
+        <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">30. Uluslararası Yaratıcı Drama Kongresi (group exhibition)</span></div>
       </div>
     </div>
     <div>
-      <h3 class="h3">Education</h3>
+      <h3 class="h3">Art Projects</h3>
       <div class="cv__list">
-        <div class="cv__row"><span class="cv__year">2011</span><span class="cv__text">MFA Painting, Mimar Sinan Fine Arts University, Istanbul</span></div>
-        <div class="cv__row"><span class="cv__year">2008</span><span class="cv__text">BA Fine Arts, Dokuz Eylül University, Izmir</span></div>
-        <div class="cv__row"><span class="cv__year">2007</span><span class="cv__text">Exchange, Gerrit Rietveld Academie, Amsterdam</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Hümeyra — Spotify Canvas illustrations</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Feridun Hürel — Spotify Canvas illustrations</span></div>
+        <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Pianist Irmak Akıncı — album cover and Spotify Canvas illustrations</span></div>
+        <div class="cv__row"><span class="cv__year">2022</span><span class="cv__text">Gıarose Dergisi — art column writing</span></div>
+        <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">Nature Art Çalıştayı — Gaziantep</span></div>
       </div>
-      <h3 class="h3 h3--gap">Awards &amp; Residencies</h3>
+      <h3 class="h3 h3--gap">Art Fairs</h3>
       <div class="cv__list">
-        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Sabancı Foundation Visual Arts Grant</span></div>
-        <div class="cv__row"><span class="cv__year">2023</span><span class="cv__text">Cité internationale des arts, Paris — residency</span></div>
-        <div class="cv__row"><span class="cv__year">2022</span><span class="cv__text">Full Art Prize, shortlist</span></div>
-        <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">Rijksakademie open studio fellowship</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Nouva Sanat Fuarı — 7 Art Galeri, Ankara</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Concept Sanat Fuarı — Historia Art Studio, Adana</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">IAAF — 3K Galeri, İzmir</span></div>
+        <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Concept Sanat Fuarı — Historia Art Studio, Antalya</span></div>
       </div>
     </div>
   </div>

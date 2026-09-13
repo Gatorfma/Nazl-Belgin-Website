@@ -13,7 +13,8 @@ index.html        markup: nav, hero, work, manifesto, films, about, contact, ove
 css/site.css      all styling; design tokens as CSS custom properties on :root
 js/site.js        behaviour, ported from the design's x-dc / DCLogic component
 favicon.svg
-art/              the three artwork JPEGs (see art/README.md — not in the repo)
+art/              41 web-sized artwork JPEGs (see art/README.md)
+tools/            heic-to-web.py, for transcoding new source photos
 .claude/launch.json  dev-server config for `python -m http.server 8080`
 ```
 
@@ -59,7 +60,7 @@ Click **Studio** in the footer and enter the passcode. The default is
 
 Signed in, you can upload works (multi-select), drag to reorder, click a work
 to edit its title/year/series/medium/dimensions, replace its image, or delete
-it. **Reset** restores the original thirty works.
+it. **Reset** restores the catalogue as shipped in `js/site.js`.
 
 Uploads are downscaled to a 1800px longest edge and stored as JPEG data URLs in
 `localStorage`, keeping each painting's true aspect ratio for the masonry grid.
@@ -69,20 +70,53 @@ Uploads are downscaled to a 1800px longest edge and stored as JPEG data URLs in
 > browser's `localStorage` — they are not uploaded anywhere, are not visible to
 > visitors, and vanish if site data is cleared. Reordering and edits made here
 > will not appear for anyone else. To publish changes for real, either commit
-> the images into `art/` and edit the `REAL` array in `js/site.js`, or put a
-> proper CMS behind it.
+> the images into `art/` and edit the `CATALOGUE` array in `js/site.js`, or put
+> a proper CMS behind it.
 
 Drag-reordering is deliberately disabled while a filter is active, since the
 visible order would not match the stored order.
 
+### Saved edits are stamped against the catalogue
+
+Each save records a fingerprint of the `CATALOGUE` array alongside the works.
+On load, a saved list is reused **only** if it was stamped against the exact
+catalogue in the current `js/site.js`; otherwise it is discarded and the shipped
+catalogue wins.
+
+This matters more than it sounds. Without it, anyone who once opened studio mode
+would have their browser pin that snapshot forever — you could add paintings to
+`CATALOGUE`, deploy, and still see the old set, with no indication why. The
+stamp makes editing this file authoritative.
+
+The consequence: **changing `CATALOGUE` discards local studio edits** in every
+browser. That is the intended trade — local edits are a scratchpad, the file is
+the source of truth — but it means real metadata belongs in `CATALOGUE`, not
+typed into studio mode and left there.
+
 ## The artwork files
 
-`art/sweet-devil.jpg`, `art/darwin.jpg` and `art/too-horny.jpg` are referenced
-but **not** included — they could not be exported intact from the design
-project, whose file-read API truncates at 256 KiB. See `art/README.md`.
+All 41 paintings are in place, converted from the artist's HEIC originals —
+see `art/README.md` for provenance and for how to add more.
 
-Until they are in place the site degrades cleanly: each missing image becomes a
-titled placeholder and the hero shows a single "Work to come" panel. A source
+The catalogue lives in the `CATALOGUE` array in `js/site.js`. Three works carry
+full records (title, year, medium, dimensions); the other 38 carry only their
+series, which is known from how the artist foldered the originals. Blank means
+unknown and is rendered as "Untitled" — nothing is invented, because a
+placeholder title on a real painting reads as a real attribution.
+
+Undated works contribute no year, and the Year filter hides itself until the
+archive holds at least two distinct years. Both come back automatically as
+real records are filled in.
+
+Source photos come off an iPhone as HEIC, which no browser but Safari can
+display, so they must be transcoded before going into `art/`:
+
+```bash
+python tools/heic-to-web.py "path/to/IMG_1234.heic" art/new-work.jpg
+```
+
+If an image is ever missing the site degrades cleanly: it becomes a titled
+placeholder, and the hero falls back to a single "Work to come" panel. A source
 that fails to load is remembered for the session so it is not retried.
 
 ## Contact form

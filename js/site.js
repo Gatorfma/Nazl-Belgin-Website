@@ -26,21 +26,59 @@
 
   /* ---------- source data ---------- */
 
-  var REAL = [
-    { src: 'art/sweet-devil.jpg', title: 'My Sweet Devil',          year: 2025, series: 'Monsters',  medium: 'Oil on canvas',              dims: '60 × 60 cm',   ratio: '2569 / 2574' },
-    { src: 'art/darwin.jpg',      title: 'Darwin Was Just Guessing', year: 2025, series: 'Evolution', medium: 'Oil on canvas',              dims: '100 × 81 cm',  ratio: '2510 / 3012' },
-    { src: 'art/too-horny.jpg',   title: 'Too Horny to Die',         year: 2025, series: 'Monsters',  medium: 'Oil and oil stick on canvas', dims: '25 × 25 cm',   ratio: '1952 / 1893' }
+  // `ratio` must match the delivered file's real pixel dimensions, not the
+  // camera original — tools/heic-to-web.py prints the value to use here.
+  //
+  // Titles, dates, media and dimensions are recorded only where they are
+  // actually known. Blank means unknown, never invented: these are real
+  // paintings and a placeholder title would read as a real attribution.
+  var CATALOGUE = [
+    // The three works whose titles and details are known.
+    { src: 'art/sweet-devil.jpg', title: 'My Sweet Devil', year: 2025, series: 'Monsters', medium: 'Oil on canvas', dims: '60 × 60 cm', ratio: '1995 / 2000' },
+    { src: 'art/darwin.jpg', title: 'Darwin Was Just Guessing', year: 2025, series: 'Evolution', medium: 'Oil on canvas', dims: '100 × 81 cm', ratio: '1667 / 2000' },
+    { src: 'art/too-horny.jpg', title: 'Too Horny to Die', year: 2025, series: 'Monsters', medium: 'Oil and oil stick on canvas', dims: '25 × 25 cm', ratio: '1952 / 1892' },
+
+    // Awaiting titles, dates, media and dimensions from the artist. Series is
+    // known from how she foldered the originals; nothing else is invented.
+    { src: 'art/monsters-4880.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1643 / 2000' },
+    { src: 'art/monsters-4914.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1530 / 2000' },
+    { src: 'art/monsters-4915.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1547 / 2000' },
+    { src: 'art/monsters-4917.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '2000 / 1997' },
+    { src: 'art/monsters-4921.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1485 / 2000' },
+    { src: 'art/monsters-4940.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1579 / 2000' },
+    { src: 'art/monsters-4943.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1984 / 2000' },
+    { src: 'art/monsters-4945.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '2000 / 1998' },
+    { src: 'art/monsters-4946.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1952 / 2000' },
+    { src: 'art/monsters-4947.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1966 / 2000' },
+    { src: 'art/monsters-4948.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1979 / 2000' },
+    { src: 'art/monsters-4949.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1955 / 2000' },
+    { src: 'art/monsters-4950.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1983 / 2000' },
+    { src: 'art/monsters-4951.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1991 / 2000' },
+    { src: 'art/monsters-4952.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '2000 / 1986' },
+    { src: 'art/monsters-4953.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1996 / 2000' },
+    { src: 'art/monsters-4955.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1962 / 2000' },
+    { src: 'art/monsters-4956.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '2000 / 1974' },
+    { src: 'art/monsters-4957.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '2000 / 1928' },
+    { src: 'art/monsters-4958.jpg', title: '', year: null, series: 'Monsters', medium: '', dims: '', ratio: '1606 / 2000' },
+    { src: 'art/evolution-1861.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1591 / 2000' },
+    { src: 'art/evolution-1862.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1569 / 2000' },
+    { src: 'art/evolution-1863.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1740 / 1770' },
+    { src: 'art/evolution-1866.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '2000 / 1973' },
+    { src: 'art/evolution-1867.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1980 / 2000' },
+    { src: 'art/evolution-1868.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1970 / 2000' },
+    { src: 'art/evolution-1869.jpg', title: '', year: null, series: 'Evolution', medium: '', dims: '', ratio: '1926 / 1948' },
+    { src: 'art/stone-hills-1849.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1599 / 2000' },
+    { src: 'art/stone-hills-1850.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1683 / 2000' },
+    { src: 'art/stone-hills-1852.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1674 / 2000' },
+    { src: 'art/stone-hills-1854.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '2000 / 1613' },
+    { src: 'art/stone-hills-1855.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1559 / 2000' },
+    { src: 'art/stone-hills-1894.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1588 / 2000' },
+    { src: 'art/stone-hills-1895.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1619 / 2000' },
+    { src: 'art/stone-hills-1896.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '2000 / 1585' },
+    { src: 'art/stone-hills-1897.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1593 / 2000' },
+    { src: 'art/stone-hills-1898.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '1604 / 2000' },
+    { src: 'art/stone-hills-1900.jpg', title: '', year: null, series: 'Stone Hills', medium: '', dims: '', ratio: '2000 / 1588' }
   ];
-
-  var TITLES = {
-    'Monsters':    ['Little Teeth', 'The Guest', 'Soft Monster, Hard Year', 'He Says He Is Sorry', 'Pink Thing Sleeping', 'Devil Learns to Sit', 'Mouth Full of Weather', 'Nightmare with Ears', 'Good Boy, Bad Century'],
-    'Evolution':   ['The Beasts Knew Better', 'First Ancestor', 'Something Grew Legs', 'Adaptation (Failed)', 'Common Descent', 'Warm Blooded, Cold Room', 'Missing Link, Found', 'Selection Pressure', 'A + T, G + C'],
-    'Stone Hills': ['Hill with No Name', 'Quarry Light', 'Stone Hills, Evening', 'The Hill Remembers', 'Dry Riverbed', 'Stone Hills, Noon', 'Two Rocks Talking', 'Where the Hills End', 'Stone Hills, Rain']
-  };
-
-  var MEDIA  = ['Oil on linen', 'Graphite and ink on paper', 'Pastel and ink on paper', 'Oil and oil stick on canvas', 'Ink on paper'];
-  var DIMS   = ['120 × 100 cm', '50 × 40 cm', '162 × 130 cm', '30 × 24 cm', '81 × 65 cm', '200 × 170 cm'];
-  var RATIOS = ['4 / 5', '1 / 1', '5 / 4', '3 / 4', '1 / 1.15', '4 / 3'];
 
   var SERIES_ORDER = ['All', 'Monsters', 'Evolution', 'Stone Hills'];
 
@@ -52,29 +90,28 @@
   ];
 
   function buildWorks() {
-    var out = [];
-    var names = Object.keys(TITLES);
-    var i = 0;
-    REAL.forEach(function (r) {
-      out.push(assign({}, r, { id: 'w' + (i++) }));
+    return CATALOGUE.map(function (r, i) {
+      return assign({}, r, { id: 'w' + i });
     });
-    for (var k = 0; k < 9; k++) {
-      names.forEach(function (s) {
-        var idx = names.indexOf(s);
-        out.push({
-          src: null,
-          title: TITLES[s][k],
-          series: s,
-          year: 2026 - ((k * 2 + idx) % 6),
-          medium: MEDIA[(k + idx) % MEDIA.length],
-          dims: DIMS[(k * 2 + idx) % DIMS.length],
-          ratio: RATIOS[(k + idx * 2) % RATIOS.length],
-          id: 'w' + (i++)
-        });
-      });
-    }
-    return out.slice(0, 30);
   }
+
+  // Studio edits are saved to localStorage, and without a version marker that
+  // saved copy would shadow the shipped catalogue forever — publish new work
+  // and anyone who ever opened studio mode would keep seeing the old set.
+  // Stamping saves with a fingerprint of the catalogue makes an update to this
+  // file win: a stale copy is discarded rather than silently preferred.
+  function catalogueStamp() {
+    var s = CATALOGUE.length + '|' + CATALOGUE.map(function (r) {
+      return r.src;
+    }).join(',');
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) {
+      h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    }
+    return CATALOGUE.length + '-' + (h >>> 0).toString(36);
+  }
+
+  var STAMP = catalogueStamp();
 
   /* ---------- small helpers ---------- */
 
@@ -95,6 +132,19 @@
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Most of the archive has no title yet, so fall back to "Untitled" for
+  // display while leaving the stored value empty for the studio editor.
+  function shownTitle(w) {
+    return (w.title && String(w.title).trim()) ? w.title : 'Untitled';
+  }
+
+  // Alt text should still say something useful for an untitled work.
+  function altText(w) {
+    return (w.title && String(w.title).trim())
+      ? w.title
+      : 'Untitled painting, ' + w.series + ' series';
   }
 
   function titleFromFile(name) {
@@ -154,7 +204,7 @@
   function save(works, note) {
     state.works = works;
     state.status = note || 'Saved';
-    if (!lsSet(STORE, JSON.stringify(works))) {
+    if (!lsSet(STORE, JSON.stringify({ stamp: STAMP, works: works }))) {
       state.status = 'Storage full — remove a work or use smaller files.';
     }
     render();
@@ -212,9 +262,18 @@
     }).slice(0, 3);
   }
 
+  var heroKey = null; // sources currently mounted, so we rebuild only on change
+
   function renderHero() {
     var stage = $('hero-stage');
     var list = heroSources();
+
+    // Rebuilding the stage restarts every crossfade and re-creates the img
+    // elements, so leave it alone unless the source list actually changed.
+    var key = list.map(function (w) { return w.src; }).join('|');
+    if (key === heroKey) { paintSlides(); return; }
+    heroKey = key;
+
     if (!list.length) {
       stage.innerHTML = '<div class="slot">Work to come</div>';
       return;
@@ -259,12 +318,20 @@
   /* ---------- filters ---------- */
 
   function renderFilters() {
+    // Undated works contribute no year — without the guard, String(null)
+    // would produce a literal "null" filter button.
     var years = [];
     state.works.forEach(function (w) {
+      if (!w.year) return;
       var y = String(w.year);
       if (years.indexOf(y) === -1) years.push(y);
     });
     years.sort(function (a, b) { return b.localeCompare(a); });
+
+    // A single known year makes the row pointless; it reappears on its own
+    // once the archive carries real dates.
+    $('year-group').hidden = years.length < 2;
+    if (years.length < 2 && state.year !== 'All') state.year = 'All';
 
     $('series-filters').innerHTML = SERIES_ORDER.map(function (s) {
       return '<button class="filter' + (state.series === s ? ' is-on' : '') +
@@ -292,8 +359,8 @@
     $('works-grid').innerHTML = list.map(function (w) {
       var ratio = w.ratio || '1 / 1';
       var inner = (w.src && !badSrc[w.src])
-        ? '<img src="' + esc(w.src) + '" alt="' + esc(w.title) + '" loading="lazy">'
-        : '<div class="slot">' + esc(w.title) + '</div>';
+        ? '<img src="' + esc(w.src) + '" alt="' + esc(altText(w)) + '" loading="lazy">'
+        : '<div class="slot">' + esc(shownTitle(w)) + '</div>';
 
       return '<figure class="work' + (seen[w.id] ? ' is-in' : '') +
                (drag ? ' is-draggable' : '') +
@@ -306,8 +373,8 @@
                  '</div>' +
                '</button>' +
                '<figcaption class="work__cap">' +
-                 '<span class="work__title">' + esc(w.title) + '</span>' +
-                 '<span class="work__year">' + esc(w.year) + '</span>' +
+                 '<span class="work__title">' + esc(shownTitle(w)) + '</span>' +
+                 (w.year ? '<span class="work__year">' + esc(w.year) + '</span>' : '') +
                  (drag ? '<span class="work__drag">Drag ⠿</span>' : '') +
                '</figcaption>' +
              '</figure>';
@@ -391,7 +458,7 @@
     document.body.style.overflow = 'hidden';
 
     $('lightbox-stage').innerHTML = (w.src && !badSrc[w.src])
-      ? '<img src="' + esc(w.src) + '" alt="' + esc(w.title) + '">'
+      ? '<img src="' + esc(w.src) + '" alt="' + esc(altText(w)) + '">'
       : '<div class="lightbox__empty">Image to come</div>';
 
     var img = $('lightbox-stage').querySelector('img');
@@ -407,13 +474,15 @@
       meta.hidden = true;
     } else {
       meta.hidden = false;
-      meta.innerHTML =
-        '<span class="lb-title">' + esc(w.title) + '</span>' +
-        '<span class="lb-num">' + esc(w.year) + '</span>' +
-        '<span>' + esc(w.medium) + '</span>' +
-        '<span>' + esc(w.dims) + '</span>' +
-        '<span class="lb-series">' + esc(w.series) + '</span>' +
-        '<span class="lb-hint">Click anywhere to close</span>';
+      // Only show the fields we actually have; an empty slot would otherwise
+      // read as a gap in the record.
+      var parts = ['<span class="lb-title">' + esc(shownTitle(w)) + '</span>'];
+      if (w.year) parts.push('<span class="lb-num">' + esc(w.year) + '</span>');
+      if (w.medium) parts.push('<span>' + esc(w.medium) + '</span>');
+      if (w.dims) parts.push('<span>' + esc(w.dims) + '</span>');
+      if (w.series) parts.push('<span class="lb-series">' + esc(w.series) + '</span>');
+      parts.push('<span class="lb-hint">Click anywhere to close</span>');
+      meta.innerHTML = parts.join('');
     }
 
     var edit = $('lightbox-edit');
@@ -765,12 +834,23 @@
   /* ---------- boot ---------- */
 
   function init() {
+    // Only reuse a saved list if it was saved against this exact catalogue.
+    // Anything older — including the pre-stamp bare-array format — is dropped,
+    // so editing this file always beats whatever a visitor's browser kept.
     var raw = lsGet(STORE);
     if (raw) {
+      var reused = false;
       try {
         var stored = JSON.parse(raw);
-        if (stored && stored.length) state.works = stored;
+        if (stored && stored.stamp === STAMP && stored.works && stored.works.length) {
+          state.works = stored.works;
+          reused = true;
+        }
       } catch (err) {}
+      if (!reused) {
+        lsDel(STORE);
+        state.status = 'Local edits cleared — the published catalogue changed.';
+      }
     }
     state.studio = lsGet(AUTH) === '1';
 
