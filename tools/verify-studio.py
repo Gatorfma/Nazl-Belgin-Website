@@ -61,6 +61,9 @@ for forbidden in ("bar-reset", "pass-input"):
         raise SystemExit(f"Legacy Studio control #{forbidden} must be removed")
 if "PASSCODE" in site_js or "nb-studio-auth" in site_js:
     raise SystemExit("Client-side passcode/auth persistence must be removed")
+for forbidden_source in ("nb-works-v1", "catalogueStamp", "localStorage"):
+    if forbidden_source in site_js:
+        raise SystemExit(f"Legacy local catalogue persistence remains: {forbidden_source}")
 if "signUp" in html or "Sign up" in html:
     raise SystemExit("Studio must not expose public sign-up")
 

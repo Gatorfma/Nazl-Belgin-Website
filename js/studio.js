@@ -22,6 +22,73 @@
     return error.message || fallback;
   }
 
+  function createArtworkTransaction(api, previousWorks, prepared) {
+    var path = model.storagePath('artwork', prepared.id, prepared.blob.type || prepared.file.type);
+    var row = {
+      id: prepared.id,
+      slug: 'work-' + prepared.id,
+      title: prepared.title || null,
+      year: prepared.year || null,
+      series: prepared.series,
+      medium: prepared.medium || null,
+      dimensions: prepared.dimensions || null,
+      storage_path: path,
+      legacy_path: null,
+      aspect_width: prepared.width,
+      aspect_height: prepared.height,
+      sort_order: previousWorks.length,
+      published: true
+    };
+    return Promise.resolve(api.upload(path, prepared.blob)).then(function () {
+      return api.insertArtwork(row);
+    }).then(function (inserted) {
+      return { ok: true, works: previousWorks.concat([inserted]), row: inserted };
+    }).catch(function (error) {
+      return Promise.resolve(api.remove([path])).catch(function (cleanupError) {
+        error.cleanupError = cleanupError;
+      }).then(function () {
+        return { ok: false, works: previousWorks, error: error };
+      });
+    });
+  }
+
+  function persistOrder(api, previousWorks, orderedIds) {
+    return Promise.resolve(api.reorderArtworks(orderedIds)).then(function () {
+      var byId = {};
+      previousWorks.forEach(function (work) { byId[work.id] = work; });
+      return { ok: true, works: orderedIds.map(function (id) { return byId[id]; }) };
+    }).catch(function (error) {
+      return { ok: false, works: previousWorks, error: error };
+    });
+  }
+
+  function replaceArtworkImageTransaction(api, previousWorks, row, prepared) {
+    var path = prepared.storagePath;
+    return Promise.resolve(api.upload(path, prepared.blob)).then(function () {
+      return api.updateArtwork(row.id, {
+        storage_path: path,
+        legacy_path: null,
+        aspect_width: prepared.width,
+        aspect_height: prepared.height
+      });
+    }).then(function (updated) {
+      if (!row.storage_path || row.storage_path === path) {
+        return { ok: true, works: previousWorks, row: updated };
+      }
+      return Promise.resolve(api.remove([row.storage_path])).then(function () {
+        return { ok: true, works: previousWorks, row: updated };
+      }).catch(function (cleanupError) {
+        return { ok: true, works: previousWorks, row: updated, cleanupError: cleanupError };
+      });
+    }).catch(function (error) {
+      return Promise.resolve(api.remove([path])).catch(function (cleanupError) {
+        error.cleanupError = cleanupError;
+      }).then(function () {
+        return { ok: false, works: previousWorks, error: error };
+      });
+    });
+  }
+
   function create(options) {
     options = options || {};
     var auth = options.auth;
@@ -140,5 +207,10 @@
     };
   }
 
-  return { create: create };
+  return {
+    create: create,
+    createArtworkTransaction: createArtworkTransaction,
+    replaceArtworkImageTransaction: replaceArtworkImageTransaction,
+    persistOrder: persistOrder
+  };
 });

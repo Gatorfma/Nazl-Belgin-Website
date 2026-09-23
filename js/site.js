@@ -11,14 +11,13 @@
 
   /* ---------- configuration ---------- */
 
-  var STORE    = 'nb-works-v1';      // localStorage key for the work list
   var SLIDE_MS = 5200;               // hero crossfade interval
   var MAX_EDGE = 1800;               // uploads are downscaled to this longest edge
 
   // Set to a URL that accepts POST JSON to deliver the contact form
   // server-side. While null, the form falls back to a prefilled mailto:.
   var FORM_ENDPOINT = null;
-  var CONTACT_EMAIL = 'studio@nazlibelgin.com';
+  var CONTACT_EMAIL = 'nazlibelgin@gmail.com';
 
   /* ---------- source data ---------- */
 
@@ -84,24 +83,6 @@
     });
   }
 
-  // Studio edits are saved to localStorage, and without a version marker that
-  // saved copy would shadow the shipped catalogue forever — publish new work
-  // and anyone who ever opened studio mode would keep seeing the old set.
-  // Stamping saves with a fingerprint of the catalogue makes an update to this
-  // file win: a stale copy is discarded rather than silently preferred.
-  function catalogueStamp() {
-    var s = FALLBACK_CATALOGUE.length + '|' + FALLBACK_CATALOGUE.map(function (r) {
-      return r.src;
-    }).join(',');
-    var h = 5381;
-    for (var i = 0; i < s.length; i++) {
-      h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-    }
-    return FALLBACK_CATALOGUE.length + '-' + (h >>> 0).toString(36);
-  }
-
-  var STAMP = catalogueStamp();
-
   /* ---------- small helpers ---------- */
 
   function assign(target) {
@@ -141,12 +122,7 @@
     return base ? base.charAt(0).toUpperCase() + base.slice(1) : 'Untitled';
   }
 
-  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
-  function lsDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
-
-  // Reads a File, downscales it to MAX_EDGE, and returns a data URL plus the
-  // image's true aspect ratio so the grid keeps each painting's proportions.
+  // Reads a File and returns an uploadable Blob plus its real dimensions.
   function readScaled(file, max) {
     return new Promise(function (resolve) {
       var fr = new FileReader();
@@ -155,12 +131,15 @@
         img.onload = function () {
           var w = img.naturalWidth, h = img.naturalHeight;
           var sc = Math.min(1, max / Math.max(w, h));
-          if (sc >= 1) { resolve({ url: fr.result, ratio: w + ' / ' + h }); return; }
+          if (sc >= 1) { resolve({ blob: file, width: w, height: h }); return; }
           var cw = Math.round(w * sc), ch = Math.round(h * sc);
           var c = document.createElement('canvas');
           c.width = cw; c.height = ch;
           c.getContext('2d').drawImage(img, 0, 0, cw, ch);
-          resolve({ url: c.toDataURL('image/jpeg', 0.88), ratio: w + ' / ' + h });
+          var mime = /^(image\/png|image\/webp|image\/jpeg)$/.test(file.type) ? file.type : 'image/jpeg';
+          c.toBlob(function (blob) {
+            resolve(blob ? { blob: blob, width: w, height: h } : null);
+          }, mime, 0.88);
         };
         img.onerror = function () { resolve(null); };
         img.src = fr.result;
@@ -174,7 +153,9 @@
 
   var state = {
     works: buildWorks(),
+    artworkRows: [],
     media: [],
+    mediaRows: [],
     cv: [],
     slide: 0,
     series: 'All',
@@ -202,6 +183,7 @@
     if (!contentApi.configured) return Promise.resolve(false);
     return contentApi.loadAll().then(function (result) {
       if (!result.artworks.error) {
+        state.artworkRows = result.artworks.rows;
         state.works = result.artworks.rows.map(function (row) {
           return window.NBContentModel.normalizeArtwork(row, contentApi.publicUrl);
         });
@@ -210,6 +192,7 @@
       }
 
       if (!result.media.error) {
+        state.mediaRows = result.media.rows;
         state.media = result.media.rows.map(function (row) {
           return window.NBContentModel.normalizeMedia(row, contentApi.publicUrl);
         });
@@ -234,19 +217,25 @@
     });
   }
 
-  function save(works, note) {
-    state.works = works;
-    state.status = note || 'Saved';
-    if (!lsSet(STORE, JSON.stringify({ stamp: STAMP, works: works }))) {
-      state.status = 'Storage full — remove a work or use smaller files.';
-    }
-    render();
-  }
-
   function patch(id, fields, note) {
-    save(state.works.map(function (w) {
-      return w.id === id ? assign({}, w, fields) : w;
-    }), note);
+    if (!state.studio || !contentApi.configured) return Promise.resolve(false);
+    var dbFields = {};
+    Object.keys(fields).forEach(function (key) {
+      var dbKey = key === 'dims' ? 'dimensions' : key;
+      var value = fields[key];
+      if (key === 'year') value = String(value).trim() ? Number(value) : null;
+      dbFields[dbKey] = value === '' ? null : value;
+    });
+    setStatus('Saving…');
+    return contentApi.updateArtwork(id, dbFields).then(function () {
+      return loadRemoteContent();
+    }).then(function () {
+      setStatus(note || 'Saved');
+      return true;
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not save this work.');
+      return false;
+    });
   }
 
   function canDrag() {
@@ -541,9 +530,39 @@
     $('studio-status').textContent = msg;
   }
 
+  function artworkRow(id) {
+    for (var i = 0; i < state.artworkRows.length; i++) {
+      if (state.artworkRows[i].id === id) return state.artworkRows[i];
+    }
+    return null;
+  }
+
+  function uniqueId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0').slice(-12);
+  }
+
+  function replacementPath(id, mime) {
+    return window.NBContentModel.storagePath('artwork', id, mime)
+      .replace(/(\.[^.]+)$/, '-' + Date.now() + '$1');
+  }
+
   function ingest(files, targetId) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return Promise.resolve();
+
+    if (!state.studio || !contentApi.configured) {
+      setStatus('Sign in to Studio before uploading.');
+      return Promise.resolve();
+    }
+
+    var invalid = list.map(function (file) {
+      return window.NBContentModel.validateFile(file, 'artwork');
+    }).filter(function (check) { return !check.ok; })[0];
+    if (invalid) {
+      setStatus(invalid.message);
+      return Promise.resolve();
+    }
 
     setStatus('Processing ' + list.length + ' image' + (list.length > 1 ? 's' : '') + '…');
 
@@ -555,29 +574,78 @@
         });
       });
     }, Promise.resolve([])).then(function (done) {
-      if (!done.length) { setStatus('Nothing could be read.'); return; }
+      if (!done.length) { setStatus('Nothing could be read.'); return false; }
 
       if (targetId) {
-        patch(targetId, { src: done[0].r.url, ratio: done[0].r.ratio }, 'Image replaced');
-        renderLightbox();
-        return;
+        var oldRow = artworkRow(targetId);
+        if (!oldRow) { setStatus('This work could not be found.'); return false; }
+        setStatus('Uploading replacement…');
+        return window.NBStudio.replaceArtworkImageTransaction(contentApi, state.works, oldRow, {
+          blob: done[0].r.blob,
+          width: done[0].r.width,
+          height: done[0].r.height,
+          storagePath: replacementPath(targetId, done[0].r.blob.type)
+        }).then(function (outcome) {
+          if (!outcome.ok) throw outcome.error;
+          return loadRemoteContent();
+        }).then(function () {
+          setStatus('Image replaced');
+          renderLightbox();
+          return true;
+        }).catch(function (error) {
+          setStatus(error.message || 'The image could not be replaced.');
+          return false;
+        });
       }
 
-      var stamp = Date.now();
-      var added = done.map(function (d, n) {
-        return {
-          id: 'u' + stamp + '-' + n,
-          src: d.r.url,
-          ratio: d.r.ratio,
-          title: titleFromFile(d.file.name),
-          year: new Date().getFullYear(),
-          series: 'Monsters',
-          medium: 'Oil on canvas',
-          dims: ''
-        };
+      var added = 0;
+      return done.reduce(function (chain, item) {
+        return chain.then(function () {
+          var id = uniqueId();
+          return window.NBStudio.createArtworkTransaction(contentApi, state.works, {
+            id: id,
+            file: item.file,
+            blob: item.r.blob,
+            width: item.r.width,
+            height: item.r.height,
+            title: titleFromFile(item.file.name),
+            year: new Date().getFullYear(),
+            series: 'Monsters',
+            medium: 'Oil on canvas',
+            dimensions: ''
+          }).then(function (outcome) {
+            if (!outcome.ok) throw outcome.error;
+            added += 1;
+            return loadRemoteContent();
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        setStatus(added + ' work' + (added === 1 ? '' : 's') + ' added — click one to edit it');
+        return true;
+      }).catch(function (error) {
+        setStatus((error && error.message) || 'An image could not be uploaded.');
+        return false;
       });
-      save(added.concat(state.works),
-        added.length + ' work' + (added.length > 1 ? 's' : '') + ' added — click one to name it');
+    });
+  }
+
+  function deleteArtwork(id) {
+    var row = artworkRow(id);
+    if (!row) { setStatus('This work could not be found.'); return Promise.resolve(false); }
+    if (!window.confirm('Delete this work permanently? This cannot be undone.')) return Promise.resolve(false);
+    setStatus('Deleting…');
+    var removeObject = row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve();
+    return removeObject.then(function () {
+      return contentApi.deleteArtwork(id);
+    }).then(function () {
+      state.lbId = null;
+      return loadRemoteContent();
+    }).then(function () {
+      setStatus('Work removed');
+      return true;
+    }).catch(function (error) {
+      setStatus(error.message || 'The work could not be removed.');
+      return false;
     });
   }
 
@@ -683,8 +751,7 @@
     $('lb-delete').addEventListener('click', function () {
       var id = state.lbId;
       if (!id) return;
-      state.lbId = null;
-      save(state.works.filter(function (w) { return w.id !== id; }), 'Work removed');
+      deleteArtwork(id);
     });
 
     // studio access
@@ -795,7 +862,19 @@
     arr.splice(ti, 0, item);
     state.dragId = null;
     state.overId = null;
-    save(arr, 'Order saved');
+    setStatus('Saving order…');
+    window.NBStudio.persistOrder(contentApi, state.works, arr.map(function (work) {
+      return work.id;
+    })).then(function (outcome) {
+      if (!outcome.ok) {
+        setStatus(outcome.error.message || 'The order could not be saved.');
+        render();
+        return;
+      }
+      state.works = outcome.works;
+      state.status = 'Order saved';
+      render();
+    });
   }
 
   function openGate() {
@@ -897,24 +976,6 @@
   /* ---------- boot ---------- */
 
   function init() {
-    // Only reuse a saved list if it was saved against this exact catalogue.
-    // Anything older — including the pre-stamp bare-array format — is dropped,
-    // so editing this file always beats whatever a visitor's browser kept.
-    var raw = lsGet(STORE);
-    if (raw) {
-      var reused = false;
-      try {
-        var stored = JSON.parse(raw);
-        if (stored && stored.stamp === STAMP && stored.works && stored.works.length) {
-          state.works = stored.works;
-          reused = true;
-        }
-      } catch (err) {}
-      if (!reused) {
-        lsDel(STORE);
-        state.status = 'Local edits cleared — the published catalogue changed.';
-      }
-    }
     $('year').textContent = String(new Date().getFullYear());
 
     watch($('films-grid'));
