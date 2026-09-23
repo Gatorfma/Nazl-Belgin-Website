@@ -25,7 +25,7 @@ python -m http.server 8080
 ```
 
 Then open <http://localhost:8080>. A plain file:// open mostly works, but
-`localStorage` is unreliable on that scheme, so studio mode wants a server.
+Studio and Supabase requests require the site to run through a server.
 
 ## What came from the design, and what changed
 
@@ -55,43 +55,51 @@ scroll-handler bounding-box scan — same effect, far less work per frame.
 
 ## Studio mode
 
-Click **Studio** in the footer and enter the passcode. The default is
-`atelier`, set as `PASSCODE` at the top of `js/site.js`.
+Studio uses Supabase Auth, Postgres Row Level Security, and the private editing
+policies in `supabase/01_schema.sql`. There is no public sign-up flow. An
+allowlisted artist can manage paintings, the portrait, Canvas videos, YouTube,
+Spotify artwork, and CV entries. Public visitors only receive published rows.
 
-Signed in, you can upload works (multi-select), drag to reorder, click a work
-to edit its title/year/series/medium/dimensions, replace its image, or delete
-it. **Reset** restores the catalogue as shipped in `js/site.js`.
+### Launch order
 
-Uploads are downscaled to a 1800px longest edge and stored as JPEG data URLs in
-`localStorage`, keeping each painting's true aspect ratio for the masonry grid.
+1. In Supabase Authentication, create the one email/password Auth user for the
+   artist and disable public sign-ups.
+2. In SQL Editor, run
+   [`01_schema.sql`](supabase/01_schema.sql),
+   [`02_seed_content.sql`](supabase/02_seed_content.sql),
+   [`03_authorize_artist.sql`](supabase/03_authorize_artist.sql), and
+   [`04_verify.sql`](supabase/04_verify.sql), in that order. Replace the email
+   placeholder in the authorization script with the Auth user's exact email.
+3. Fill [`js/supabase-config.js`](js/supabase-config.js) with the project URL
+   and publishable key.
+4. Set the Supabase production Site URL, add the exact production recovery
+   redirect URL, and add the exact localhost development URL used for testing.
+5. Configure custom SMTP on the purchased domain. Enable secure password
+   change, password-change notifications, and a password policy requiring at
+   least 12 characters with upper- and lowercase letters, a number, and a
+   symbol.
+6. Run the media migration in dry-run mode, run it live only after the dry run
+   reports zero failures, and then run `04_verify.sql` again:
 
-> This is a convenience for editing on your own machine, not access control.
-> The passcode is in client-side JavaScript and the works live in this
-> browser's `localStorage` — they are not uploaded anywhere, are not visible to
-> visitors, and vanish if site data is cleared. Reordering and edits made here
-> will not appear for anyone else. To publish changes for real, either commit
-> the images into `art/` and edit the `CATALOGUE` array in `js/site.js`, or put
-> a proper CMS behind it.
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tools/migrate-media.ps1 -DryRun -RowsFile tools/fixtures/current-media-rows.json
+   powershell -ExecutionPolicy Bypass -File tools/migrate-media.ps1
+   ```
 
-Drag-reordering is deliberately disabled while a filter is active, since the
-visible order would not match the stored order.
+7. On the production domain, exercise anonymous reads; artist login; create,
+   edit, delete, reorder, and replacement for every content type; sign-out;
+   recovery email; reauthentication email; password update; and the Gmail
+   contact link and form fallback.
 
-### Saved edits are stamped against the catalogue
+The publishable key is intended for browser code: RLS is the authorization
+boundary. Never paste a service-role key into `js/supabase-config.js`, this
+repository, or the migration tool. The migration authenticates as the
+allowlisted artist and prompts for the password without writing it to disk.
 
-Each save records a fingerprint of the `CATALOGUE` array alongside the works.
-On load, a saved list is reused **only** if it was stamped against the exact
-catalogue in the current `js/site.js`; otherwise it is discarded and the shipped
-catalogue wins.
-
-This matters more than it sounds. Without it, anyone who once opened studio mode
-would have their browser pin that snapshot forever — you could add paintings to
-`CATALOGUE`, deploy, and still see the old set, with no indication why. The
-stamp makes editing this file authoritative.
-
-The consequence: **changing `CATALOGUE` discards local studio edits** in every
-browser. That is the intended trade — local edits are a scratchpad, the file is
-the source of truth — but it means real metadata belongs in `CATALOGUE`, not
-typed into studio mode and left there.
+Uploads use the `site-media` bucket. Painting and image uploads are validated
+and downscaled to a maximum 1800px edge when necessary; Canvas accepts MP4 or
+WebM. Painting drag-reordering remains disabled while a filter is active so the
+visible subset cannot produce an ambiguous global order.
 
 ## The artwork files
 
@@ -122,7 +130,7 @@ that fails to load is remembered for the session so it is not retried.
 ## Contact form
 
 With no backend, the form validates input and then hands the message to the
-visitor's mail client via a prefilled `mailto:`.
+visitor's mail client via a prefilled `mailto:` to `nazlibelgin@gmail.com`.
 
 To deliver it server-side instead, set `FORM_ENDPOINT` in `js/site.js` to a URL
 that accepts `POST` JSON of `{name, email, message}`. The mailto path is then

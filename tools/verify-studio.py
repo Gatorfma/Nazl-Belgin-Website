@@ -8,6 +8,8 @@ class StudioStructure(HTMLParser):
         self.elements = {}
         self.scripts = []
         self.buttons = []
+        self.contact_links = []
+        self.current_contact = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -18,6 +20,21 @@ class StudioStructure(HTMLParser):
             self.scripts.append(attributes["src"])
         if tag == "button":
             self.buttons.append(attributes)
+        if (
+            tag == "a"
+            and "contact__link" in attributes.get("class", "").split()
+            and attributes.get("href", "").startswith("mailto:")
+        ):
+            self.contact_links.append({"attributes": attributes, "text": ""})
+            self.current_contact = len(self.contact_links) - 1
+
+    def handle_endtag(self, tag):
+        if tag == "a":
+            self.current_contact = None
+
+    def handle_data(self, data):
+        if self.current_contact is not None:
+            self.contact_links[self.current_contact]["text"] += data
 
 
 root = Path(__file__).resolve().parents[1]
@@ -63,10 +80,22 @@ missing_controls = sorted(required_controls - parser.elements.keys())
 if missing_controls:
     raise SystemExit(f"Missing Studio controls: {missing_controls}")
 
+if len(parser.contact_links) != 1:
+    raise SystemExit(f"Expected one contact link; found {len(parser.contact_links)}")
+contact = parser.contact_links[0]
+expected_email = "nazlibelgin@gmail.com"
+if contact["text"].strip() != expected_email:
+    raise SystemExit(f"Contact text must be {expected_email}")
+if contact["attributes"].get("href") != f"mailto:{expected_email}":
+    raise SystemExit(f"Contact mailto must be {expected_email}")
+
 for forbidden in ("bar-reset", "pass-input"):
     if forbidden in parser.elements:
         raise SystemExit(f"Legacy Studio control #{forbidden} must be removed")
-if "PASSCODE" in site_js or "nb-studio-auth" in site_js:
+runtime = html + "\n" + site_js
+if "studio@nazlibelgin.com" in runtime:
+    raise SystemExit("Legacy studio contact address must be removed")
+if "PASSCODE" in runtime or "nb-studio-auth" in runtime:
     raise SystemExit("Client-side passcode/auth persistence must be removed")
 for forbidden_source in ("nb-works-v1", "catalogueStamp", "localStorage"):
     if forbidden_source in site_js:
