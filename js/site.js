@@ -32,7 +32,7 @@
   // Titles, dates, media and dimensions are recorded only where they are
   // actually known. Blank means unknown, never invented: these are real
   // paintings and a placeholder title would read as a real attribution.
-  var CATALOGUE = [
+  var FALLBACK_CATALOGUE = [
     // The three works whose titles and details are known.
     { src: 'art/sweet-devil.jpg', title: 'My Sweet Devil', year: 2025, series: 'Monsters', medium: 'Oil on canvas', dims: '60 × 60 cm', ratio: '1995 / 2000' },
     { src: 'art/darwin.jpg', title: 'Darwin Was Just Guessing', year: 2025, series: 'Evolution', medium: 'Oil on canvas', dims: '100 × 81 cm', ratio: '1667 / 2000' },
@@ -83,7 +83,7 @@
   var SERIES_ORDER = ['All', 'Monsters', 'Evolution', 'Stone Hills'];
 
   function buildWorks() {
-    return CATALOGUE.map(function (r, i) {
+    return FALLBACK_CATALOGUE.map(function (r, i) {
       return assign({}, r, { id: 'w' + i });
     });
   }
@@ -94,14 +94,14 @@
   // Stamping saves with a fingerprint of the catalogue makes an update to this
   // file win: a stale copy is discarded rather than silently preferred.
   function catalogueStamp() {
-    var s = CATALOGUE.length + '|' + CATALOGUE.map(function (r) {
+    var s = FALLBACK_CATALOGUE.length + '|' + FALLBACK_CATALOGUE.map(function (r) {
       return r.src;
     }).join(',');
     var h = 5381;
     for (var i = 0; i < s.length; i++) {
       h = ((h << 5) + h + s.charCodeAt(i)) | 0;
     }
-    return CATALOGUE.length + '-' + (h >>> 0).toString(36);
+    return FALLBACK_CATALOGUE.length + '-' + (h >>> 0).toString(36);
   }
 
   var STAMP = catalogueStamp();
@@ -178,6 +178,8 @@
 
   var state = {
     works: buildWorks(),
+    media: [],
+    cv: [],
     slide: 0,
     series: 'All',
     year: 'All',
@@ -193,6 +195,46 @@
   var replaceId = null; // work awaiting an image replacement
   var slideTimer = null;
   var badSrc = {};      // sources that failed to load, so we stop offering them
+
+  var contentApi = (window.NBContentApi && window.supabase)
+    ? window.NBContentApi.create(window.NB_SUPABASE_CONFIG || {}, window.supabase)
+    : { configured: false };
+
+  function loadRemoteContent() {
+    if (!contentApi.configured) return Promise.resolve(false);
+    return contentApi.loadAll().then(function (result) {
+      if (!result.artworks.error) {
+        state.works = result.artworks.rows.map(function (row) {
+          return window.NBContentModel.normalizeArtwork(row, contentApi.publicUrl);
+        });
+      } else if (window.console) {
+        console.error('Artwork content could not be loaded.', result.artworks.error);
+      }
+
+      if (!result.media.error) {
+        state.media = result.media.rows.map(function (row) {
+          return window.NBContentModel.normalizeMedia(row, contentApi.publicUrl);
+        });
+        window.NBContentRender.renderMedia(document, window.NBContentModel.groupMedia(state.media));
+      } else if (window.console) {
+        console.error('Media content could not be loaded.', result.media.error);
+      }
+
+      if (!result.cv.error) {
+        state.cv = result.cv.rows;
+        window.NBContentRender.renderCv(document, state.cv);
+      } else if (window.console) {
+        console.error('CV content could not be loaded.', result.cv.error);
+      }
+
+      render();
+      document.dispatchEvent(new CustomEvent('nb:content-updated'));
+      return true;
+    }).catch(function (error) {
+      if (window.console) console.error('Remote content could not be loaded.', error);
+      return false;
+    });
+  }
 
   function save(works, note) {
     state.works = works;
@@ -830,6 +872,7 @@
     render();
     wire();
     startSlides();
+    loadRemoteContent();
   }
 
   if (document.readyState === 'loading') {
