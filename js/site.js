@@ -3,19 +3,15 @@
  * Ported from the source design canvas (x-dc / DCLogic) to plain ES2018.
  * No build step, no dependencies.
  *
- * Studio mode lives entirely in this browser: works are persisted to
- * localStorage under STORE, the signed-in flag under AUTH. It is an
- * editing convenience for the artist on her own machine, not real
- * server-side auth — see README.
+ * Public content comes from Supabase when configured, with checked-in
+ * content as the startup/outage fallback. Studio access uses Supabase Auth.
  */
 (function () {
   'use strict';
 
   /* ---------- configuration ---------- */
 
-  var PASSCODE = 'atelier';          // studio passcode
   var STORE    = 'nb-works-v1';      // localStorage key for the work list
-  var AUTH     = 'nb-studio-auth';   // localStorage key for the studio flag
   var SLIDE_MS = 5200;               // hero crossfade interval
   var MAX_EDGE = 1800;               // uploads are downscaled to this longest edge
 
@@ -199,6 +195,8 @@
   var contentApi = (window.NBContentApi && window.supabase)
     ? window.NBContentApi.create(window.NB_SUPABASE_CONFIG || {}, window.supabase)
     : { configured: false };
+  var studioController = null;
+  var studioReturnFocus = null;
 
   function loadRemoteContent() {
     if (!contentApi.configured) return Promise.resolve(false);
@@ -692,9 +690,7 @@
     // studio access
     $('studio-toggle').addEventListener('click', function () {
       if (state.studio) {
-        state.studio = false;
-        state.status = '';
-        render();
+        studioController.signOut();
       } else {
         openGate();
       }
@@ -702,34 +698,57 @@
 
     $('pass-form').addEventListener('submit', function (e) {
       e.preventDefault();
-      var val = $('pass-input').value.trim().toLowerCase();
-      if (val === String(PASSCODE).toLowerCase()) {
-        lsSet(AUTH, '1');
-        state.studio = true;
-        state.status = 'Signed in';
-        closeGate();
-        render();
-      } else {
-        $('pass-error').hidden = false;
-      }
+      var button = $('studio-submit');
+      button.disabled = true;
+      $('pass-error').textContent = 'Signing in…';
+      studioController.login($('studio-email').value.trim(), $('studio-password').value)
+        .then(function (outcome) {
+          $('pass-error').textContent = outcome.message;
+          if (outcome.ok) closeGate();
+        }).then(function () { button.disabled = false; });
     });
 
     $('pass-cancel').addEventListener('click', closeGate);
 
-    $('bar-signout').addEventListener('click', function () {
-      lsDel(AUTH);
-      state.studio = false;
-      state.lbId = null;
-      state.status = '';
-      render();
+    $('studio-forgot').addEventListener('click', function () {
+      var email = $('studio-email').value.trim();
+      $('pass-error').textContent = 'Requesting recovery email…';
+      studioController.requestRecovery(email, window.location.origin + window.location.pathname)
+        .then(function (outcome) { $('pass-error').textContent = outcome.message; });
     });
 
-    $('bar-reset').addEventListener('click', function () {
-      lsDel(STORE);
-      state.works = buildWorks();
-      state.status = 'Reset to the original set';
-      render();
+    $('bar-signout').addEventListener('click', function () {
+      studioController.signOut();
     });
+
+    $('bar-password').addEventListener('click', function () {
+      openPasswordGate();
+    });
+
+    $('password-send-code').addEventListener('click', function () {
+      $('password-status').textContent = 'Sending verification code…';
+      studioController.requestPasswordChange().then(function (outcome) {
+        $('password-status').textContent = outcome.message;
+      });
+    });
+
+    $('password-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var button = $('password-submit');
+      button.disabled = true;
+      studioController.submitPasswordChange(
+        $('password-nonce').value.trim(), $('password-new').value, $('password-confirm').value
+      ).then(function (outcome) {
+        $('password-status').textContent = outcome.message;
+        if (outcome.ok) {
+          $('password-nonce').value = '';
+          $('password-new').value = '';
+          $('password-confirm').value = '';
+        }
+      }).then(function () { button.disabled = false; });
+    });
+
+    $('password-cancel').addEventListener('click', closePasswordGate);
 
     // uploads
     $('bar-upload').addEventListener('click', pickAdd);
@@ -748,6 +767,7 @@
     window.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (!$('passgate').hidden) { closeGate(); return; }
+      if (!$('passwordgate').hidden) { closePasswordGate(); return; }
       if (state.lbId) closeLightbox();
     });
 
@@ -779,16 +799,47 @@
   }
 
   function openGate() {
-    $('pass-error').hidden = true;
-    $('pass-input').value = '';
+    studioReturnFocus = document.activeElement;
+    $('pass-error').textContent = contentApi.configured ? '' : 'Studio needs Supabase configuration before sign-in.';
+    $('studio-password').value = '';
     $('passgate').hidden = false;
-    $('pass-input').focus();
+    $('studio-email').focus();
   }
 
   function closeGate() {
     $('passgate').hidden = true;
-    $('pass-error').hidden = true;
-    $('pass-input').value = '';
+    $('pass-error').textContent = '';
+    $('studio-password').value = '';
+    if (studioReturnFocus && studioReturnFocus.focus) studioReturnFocus.focus();
+  }
+
+  function openPasswordGate() {
+    studioReturnFocus = document.activeElement;
+    $('password-status').textContent = '';
+    $('passwordgate').hidden = false;
+    $('password-send-code').focus();
+  }
+
+  function closePasswordGate() {
+    $('passwordgate').hidden = true;
+    $('password-status').textContent = '';
+    if (studioReturnFocus && studioReturnFocus.focus) studioReturnFocus.focus();
+  }
+
+  function setupStudioAuth() {
+    studioController = window.NBStudio.create({
+      auth: contentApi.configured ? contentApi.auth : null,
+      isStudioUser: contentApi.configured ? contentApi.isStudioUser : function () { return Promise.resolve(false); },
+      onStudioChange: function (on) {
+        state.studio = on;
+        if (!on) state.lbId = null;
+        state.status = on ? 'Signed in' : '';
+        render();
+      },
+      onRecovery: openPasswordGate,
+      onLoginRequest: openGate
+    });
+    return studioController.init();
   }
 
   /* ---------- contact form ---------- */
@@ -864,13 +915,12 @@
         state.status = 'Local edits cleared — the published catalogue changed.';
       }
     }
-    state.studio = lsGet(AUTH) === '1';
-
     $('year').textContent = String(new Date().getFullYear());
 
     watch($('films-grid'));
     render();
     wire();
+    setupStudioAuth();
     startSlides();
     loadRemoteContent();
   }
