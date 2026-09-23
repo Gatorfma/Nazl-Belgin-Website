@@ -34,3 +34,21 @@ test('renders privacy-enhanced YouTube, Canvas video and escaped Spotify groups'
   assert.match(html.spotify, /A &amp; B/);
   assert.match(html.spotify, /Cover &quot;one&quot;/);
 });
+
+test('manager renders every agreed section with escaped values and labelled controls', function () {
+  var html = render.managerHtml({
+    portrait: { id: 'p1', title: 'Portrait' },
+    youtube: { id: 'y1', title: 'YouTube', externalUrl: 'https://www.youtube-nocookie.com/embed/VriyhA6ayys' },
+    canvasVideos: [{ id: 'v1', title: 'Dream 8' }],
+    spotifyGroups: [{ name: 'A & B', items: [{ id: 's1', title: '<Untitled>' }] }],
+    cv: { exhibition: [{ id: 'e1', year: '2025', description: 'London' }], project: [], fair: [] }
+  }, 'spotify');
+  assert.match(html, /Portrait/);
+  assert.match(html, /Canvas/);
+  assert.match(html, /YouTube/);
+  assert.match(html, /A &amp; B/);
+  assert.match(html, /&lt;Untitled&gt;/);
+  assert.match(html, /Selected Exhibitions/);
+  assert.match(html, /data-manager-section="spotify"[^>]*aria-selected="true"/);
+  assert.doesNotMatch(html, /<Untitled>/);
+});

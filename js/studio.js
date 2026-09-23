@@ -89,6 +89,93 @@
     });
   }
 
+  function createMediaFileTransaction(api, previousRows, prepared) {
+    var row = Object.assign({}, prepared.fields, {
+      id: prepared.id,
+      storage_path: prepared.storagePath,
+      legacy_path: null,
+      mime_type: prepared.blob.type,
+      aspect_width: prepared.width || null,
+      aspect_height: prepared.height || null
+    });
+    return Promise.resolve(api.upload(prepared.storagePath, prepared.blob)).then(function () {
+      return api.insertMedia(row);
+    }).then(function (inserted) {
+      return { ok: true, rows: previousRows.concat([inserted]), row: inserted };
+    }).catch(function (error) {
+      return Promise.resolve(api.remove([prepared.storagePath])).catch(function (cleanupError) {
+        error.cleanupError = cleanupError;
+      }).then(function () {
+        return { ok: false, rows: previousRows, error: error };
+      });
+    });
+  }
+
+  function replaceMediaFileTransaction(api, previousRows, row, prepared) {
+    var fields = Object.assign({}, prepared.fields || {}, {
+      storage_path: prepared.storagePath,
+      legacy_path: null,
+      mime_type: prepared.blob.type,
+      aspect_width: prepared.width || null,
+      aspect_height: prepared.height || null
+    });
+    return Promise.resolve(api.upload(prepared.storagePath, prepared.blob)).then(function () {
+      return api.updateMedia(row.id, fields);
+    }).then(function (updated) {
+      if (!row.storage_path || row.storage_path === prepared.storagePath) {
+        return { ok: true, rows: previousRows, row: updated };
+      }
+      return Promise.resolve(api.remove([row.storage_path])).then(function () {
+        return { ok: true, rows: previousRows, row: updated };
+      }).catch(function (cleanupError) {
+        return { ok: true, rows: previousRows, row: updated, cleanupError: cleanupError };
+      });
+    }).catch(function (error) {
+      return Promise.resolve(api.remove([prepared.storagePath])).catch(function (cleanupError) {
+        error.cleanupError = cleanupError;
+      }).then(function () {
+        return { ok: false, rows: previousRows, error: error };
+      });
+    });
+  }
+
+  function saveYouTube(api, row, value, fields) {
+    var normalized = model.normalizeYoutubeUrl(value);
+    if (!normalized) return Promise.resolve({ ok: false, error: new Error('Enter a valid YouTube URL.') });
+    return Promise.resolve(api.updateMedia(row.id, Object.assign({}, fields || {}, {
+      external_url: normalized,
+      storage_path: null,
+      legacy_path: null,
+      mime_type: null
+    }))).then(function (updated) {
+      return { ok: true, row: updated };
+    }).catch(function (error) {
+      return { ok: false, error: error };
+    });
+  }
+
+  function confirmedOrder(request, previousRows, orderedIds) {
+    return Promise.resolve(request()).then(function () {
+      var byId = {};
+      previousRows.forEach(function (row) { byId[row.id] = row; });
+      return { ok: true, rows: orderedIds.map(function (id) { return byId[id]; }) };
+    }).catch(function (error) {
+      return { ok: false, rows: previousRows, error: error };
+    });
+  }
+
+  function persistMediaOrder(api, previousRows, kind, groupName, orderedIds) {
+    return confirmedOrder(function () {
+      return api.reorderMedia(kind, groupName || null, orderedIds);
+    }, previousRows, orderedIds);
+  }
+
+  function persistCvOrder(api, previousRows, category, orderedIds) {
+    return confirmedOrder(function () {
+      return api.reorderCv(category, orderedIds);
+    }, previousRows, orderedIds);
+  }
+
   function create(options) {
     options = options || {};
     var auth = options.auth;
@@ -211,6 +298,11 @@
     create: create,
     createArtworkTransaction: createArtworkTransaction,
     replaceArtworkImageTransaction: replaceArtworkImageTransaction,
+    createMediaFileTransaction: createMediaFileTransaction,
+    replaceMediaFileTransaction: replaceMediaFileTransaction,
+    saveYouTube: saveYouTube,
+    persistMediaOrder: persistMediaOrder,
+    persistCvOrder: persistCvOrder,
     persistOrder: persistOrder
   };
 });

@@ -71,7 +71,8 @@ function fakeMutationApi(options) {
   options = options || {};
   return {
     removedPaths: [],
-    upload: async function () { return {}; },
+    objects: new Set(options.initialObjects || []),
+    upload: async function (path) { this.objects.add(path); return {}; },
     insertArtwork: async function (row) {
       if (options.insertError) throw options.insertError;
       return row;
@@ -80,10 +81,28 @@ function fakeMutationApi(options) {
       if (options.updateError) throw options.updateError;
       return Object.assign({ id: id }, patch);
     },
+    updateMedia: async function (id, patch) {
+      if (options.updateMediaError) throw options.updateMediaError;
+      return Object.assign({ id: id }, patch);
+    },
+    insertMedia: async function (row) {
+      if (options.insertMediaError) throw options.insertMediaError;
+      return row;
+    },
     reorderArtworks: async function () {
       if (options.reorderError) throw options.reorderError;
     },
-    remove: async function (paths) { this.removedPaths = this.removedPaths.concat(paths); }
+    reorderMedia: async function () {
+      if (options.reorderMediaError) throw options.reorderMediaError;
+    },
+    reorderCv: async function () {
+      if (options.reorderCvError) throw options.reorderCvError;
+    },
+    remove: async function (paths) {
+      var self = this;
+      this.removedPaths = this.removedPaths.concat(paths);
+      paths.forEach(function (path) { self.objects.delete(path); });
+    }
   };
 }
 
@@ -130,4 +149,52 @@ test('removes the replacement object and keeps the old object when row update fa
   assert.equal(got.ok, false);
   assert.deepEqual(got.works, previous);
   assert.deepEqual(api.removedPaths, ['artworks/a-2.webp']);
+});
+
+test('media replacement keeps the confirmed record when its row update fails', async function () {
+  var api = fakeMutationApi({ updateMediaError: new Error('row rejected') });
+  var previous = [{ id: 'p1', storage_path: 'media/portrait/p1.jpg' }];
+  var got = await studio.replaceMediaFileTransaction(api, previous, previous[0], {
+    blob: { type: 'image/webp' }, storagePath: 'media/portrait/p1-2.webp',
+    width: 800, height: 1000, fields: { title: 'New portrait' }
+  });
+  assert.equal(got.ok, false);
+  assert.deepEqual(got.rows, previous);
+  assert.deepEqual(api.removedPaths, ['media/portrait/p1-2.webp']);
+});
+
+test('media replacement returns the confirmed row and removes only the old object', async function () {
+  var api = fakeMutationApi({ initialObjects: ['media/portrait/p1.jpg'] });
+  var previous = [{ id: 'p1', storage_path: 'media/portrait/p1.jpg' }];
+  var got = await studio.replaceMediaFileTransaction(api, previous, previous[0], {
+    blob: { type: 'image/webp' }, storagePath: 'media/portrait/p1-2.webp',
+    width: 800, height: 1000, fields: { title: 'New portrait' }
+  });
+  assert.equal(got.ok, true);
+  assert.equal(got.row.storage_path, 'media/portrait/p1-2.webp');
+  assert.deepEqual(Array.from(api.objects), ['media/portrait/p1-2.webp']);
+});
+
+test('media and CV order helpers preserve confirmed rows when an RPC fails', async function () {
+  var media = [{ id: 'm1' }, { id: 'm2' }];
+  var cv = [{ id: 'c1' }, { id: 'c2' }];
+  var mediaResult = await studio.persistMediaOrder(
+    fakeMutationApi({ reorderMediaError: new Error('duplicate') }), media, 'spotify_image', 'Artist', ['m2', 'm1']
+  );
+  var cvResult = await studio.persistCvOrder(
+    fakeMutationApi({ reorderCvError: new Error('duplicate') }), cv, 'project', ['c2', 'c1']
+  );
+  assert.equal(mediaResult.ok, false);
+  assert.deepEqual(mediaResult.rows, media);
+  assert.equal(cvResult.ok, false);
+  assert.deepEqual(cvResult.rows, cv);
+});
+
+test('invalid YouTube URLs are rejected before any database update', async function () {
+  var calls = 0;
+  var got = await studio.saveYouTube({
+    updateMedia: async function () { calls += 1; }
+  }, { id: 'y1' }, 'https://example.com/not-youtube');
+  assert.equal(got.ok, false);
+  assert.equal(calls, 0);
 });

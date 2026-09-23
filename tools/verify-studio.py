@@ -26,7 +26,11 @@ site_js = (root / "js" / "site.js").read_text(encoding="utf-8")
 parser = StudioStructure()
 parser.feed(html)
 
-for dialog_id, label_id in (("passgate", "studio-login-title"), ("passwordgate", "password-title")):
+for dialog_id, label_id in (
+    ("passgate", "studio-login-title"),
+    ("passwordgate", "password-title"),
+    ("managergate", "manager-title"),
+):
     if dialog_id not in parser.elements:
         raise SystemExit(f"Missing Studio dialog #{dialog_id}")
     _, attributes = parser.elements[dialog_id]
@@ -51,7 +55,10 @@ for element_id, (input_type, autocomplete) in required_inputs.items():
     if attributes.get("autocomplete") != autocomplete:
         raise SystemExit(f"#{element_id} must use autocomplete={autocomplete}")
 
-required_controls = {"studio-forgot", "bar-manage", "bar-password", "bar-signout"}
+required_controls = {
+    "studio-forgot", "bar-manage", "bar-password", "bar-signout",
+    "manager-close", "manager-body", "manager-status",
+}
 missing_controls = sorted(required_controls - parser.elements.keys())
 if missing_controls:
     raise SystemExit(f"Missing Studio controls: {missing_controls}")

@@ -106,12 +106,126 @@
     return changed;
   }
 
+  function managerField(label, name, value, options) {
+    options = options || {};
+    var type = options.type || 'text';
+    var attrs = options.attrs ? ' ' + options.attrs : '';
+    var required = options.required === false ? '' : ' required';
+    return '<label class="manager__field"><span>' + esc(label) + '</span><input name="' +
+      esc(name) + '" type="' + esc(type) + '" value="' + esc(value || '') + '"' +
+      attrs + required + '></label>';
+  }
+
+  function managerActions(label, canMove) {
+    return '<div class="manager__actions">' +
+      (canMove ? '<button type="button" data-manager-action="up">Move up</button>' +
+        '<button type="button" data-manager-action="down">Move down</button>' : '') +
+      '<button type="submit">Save changes</button>' +
+      '<button type="button" data-manager-action="delete" class="manager__delete">Delete ' + esc(label) + '</button>' +
+      '</div>';
+  }
+
+  function mediaRow(item, kind, options) {
+    options = options || {};
+    var file = options.fileLabel ? managerField(options.fileLabel, 'file', '', {
+      type: 'file', attrs: 'accept="' + esc(options.accept) + '"', required: false
+    }) : '';
+    var group = options.group ? managerField('Artist or group', 'group_name', item.groupName) : '';
+    return '<form class="manager__row" data-id="' + esc(item.id) + '" data-kind="' + esc(kind) + '">' +
+      managerField('Title', 'title', item.title) + group +
+      managerField('Alternative text', 'alt_text', item.altText, { required: false }) + file +
+      managerActions(item.title || kind, options.canMove !== false) + '</form>';
+  }
+
+  function managerHtml(data, activeSection) {
+    data = data || {};
+    activeSection = activeSection || 'portrait';
+    var sections = [
+      ['portrait', 'Portrait'], ['canvas', 'Canvas'], ['youtube', 'YouTube'],
+      ['spotify', 'Spotify'], ['cv', 'CV']
+    ];
+    var nav = sections.map(function (section) {
+      var selected = section[0] === activeSection;
+      return '<button type="button" role="tab" data-manager-section="' + section[0] +
+        '" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '">' +
+        section[1] + '</button>';
+    }).join('');
+    var body = '';
+
+    if (activeSection === 'portrait') {
+      body = '<h3>Portrait</h3><p class="manager__instruction">Replace the About portrait or update its accessible description.</p>' +
+        (data.portrait ? mediaRow(data.portrait, 'portrait', {
+          fileLabel: 'Replacement image', accept: 'image/jpeg,image/png,image/webp', canMove: false
+        }) : '<p>No portrait is published.</p>');
+    }
+
+    if (activeSection === 'canvas') {
+      body = '<h3>Canvas videos</h3><form class="manager__row manager__row--new" data-kind="canvas_video" data-new="true">' +
+        managerField('Title', 'title', '') +
+        managerField('Alternative text', 'alt_text', '', { required: false }) +
+        managerField('Video file', 'file', '', { type: 'file', attrs: 'accept="video/mp4,video/webm"' }) +
+        '<div class="manager__actions"><button type="submit">Add Canvas video</button></div></form>' +
+        (data.canvasVideos || []).map(function (item) {
+          return mediaRow(item, 'canvas_video', {
+            fileLabel: 'Replacement video', accept: 'video/mp4,video/webm'
+          });
+        }).join('');
+    }
+
+    if (activeSection === 'youtube') {
+      var youtube = data.youtube || {};
+      body = '<h3>YouTube</h3><p class="manager__instruction">Paste a YouTube watch, short, share or embed URL.</p>' +
+        '<form class="manager__row" data-id="' + esc(youtube.id || '') + '" data-kind="youtube">' +
+        managerField('Title', 'title', youtube.title || 'YouTube') +
+        managerField('YouTube URL', 'external_url', youtube.externalUrl || '', { type: 'url' }) +
+        '<div class="manager__actions"><button type="submit">Save YouTube video</button></div></form>';
+    }
+
+    if (activeSection === 'spotify') {
+      body = '<h3>Spotify artwork</h3><form class="manager__row manager__row--new" data-kind="spotify_image" data-new="true">' +
+        managerField('Artist or group', 'group_name', '') + managerField('Title', 'title', '') +
+        managerField('Alternative text', 'alt_text', '', { required: false }) +
+        managerField('Image file', 'file', '', { type: 'file', attrs: 'accept="image/jpeg,image/png,image/webp"' }) +
+        '<div class="manager__actions"><button type="submit">Add Spotify artwork</button></div></form>' +
+        (data.spotifyGroups || []).map(function (group) {
+          return '<section class="manager__group"><h4>' + esc(group.name) + '</h4>' + group.items.map(function (item) {
+            return mediaRow(item, 'spotify_image', {
+              group: true, fileLabel: 'Replacement image', accept: 'image/jpeg,image/png,image/webp'
+            });
+          }).join('') + '</section>';
+        }).join('');
+    }
+
+    if (activeSection === 'cv') {
+      var cv = data.cv || { exhibition: [], project: [], fair: [] };
+      var categoryNames = { exhibition: 'Selected Exhibitions', project: 'Projects', fair: 'Art Fairs' };
+      body = '<h3>CV</h3><form class="manager__row manager__row--new" data-kind="cv" data-new="true">' +
+        '<label class="manager__field"><span>Section</span><select name="category" required>' +
+        '<option value="exhibition">Selected Exhibitions</option><option value="project">Projects</option>' +
+        '<option value="fair">Art Fairs</option></select></label>' +
+        managerField('Year', 'year', '') + managerField('Description', 'description', '') +
+        '<div class="manager__actions"><button type="submit">Add CV entry</button></div></form>' +
+        ['exhibition', 'project', 'fair'].map(function (category) {
+          return '<section class="manager__group"><h4>' + categoryNames[category] + '</h4>' +
+            (cv[category] || []).map(function (entry) {
+              return '<form class="manager__row" data-id="' + esc(entry.id) + '" data-kind="cv" data-category="' + category + '">' +
+                managerField('Year', 'year', entry.year) + managerField('Description', 'description', entry.description) +
+                managerActions(entry.description || 'CV entry', true) + '</form>';
+            }).join('') + '</section>';
+        }).join('');
+    }
+
+    return '<div class="manager__layout"><nav class="manager__nav" role="tablist" aria-label="Content sections, including Selected Exhibitions">' +
+      nav + '</nav><div class="manager__content" role="tabpanel">' + body + '</div></div>';
+  }
+
   return {
     mergeLoadResult: mergeLoadResult,
     cvHtml: cvHtml,
     mediaHtml: mediaHtml,
     renderMedia: renderMedia,
     renderPortrait: renderPortrait,
-    renderCv: renderCv
+    renderCv: renderCv,
+    managerHtml: managerHtml
   };
 });

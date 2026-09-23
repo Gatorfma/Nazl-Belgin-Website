@@ -162,6 +162,8 @@
     year: 'All',
     lbId: null,
     studio: false,
+    managerOpen: false,
+    managerSection: 'portrait',
     status: '',
     dragId: null,
     overId: null,
@@ -523,6 +525,26 @@
     document.body.style.paddingBottom = on ? '64px' : '';
   }
 
+  function groupedCv() {
+    var grouped = { exhibition: [], project: [], fair: [] };
+    state.cv.slice().sort(function (a, b) {
+      return Number(a.sort_order) - Number(b.sort_order);
+    }).forEach(function (entry) {
+      if (grouped[entry.category]) grouped[entry.category].push(entry);
+    });
+    return grouped;
+  }
+
+  function renderManager() {
+    var gate = $('managergate');
+    if (!gate) return;
+    gate.hidden = !state.managerOpen;
+    if (!state.managerOpen) return;
+    var grouped = window.NBContentModel.groupMedia(state.media);
+    grouped.cv = groupedCv();
+    $('manager-body').innerHTML = window.NBContentRender.managerHtml(grouped, state.managerSection);
+  }
+
   /* ---------- uploads ---------- */
 
   function setStatus(msg) {
@@ -649,6 +671,230 @@
     });
   }
 
+  function managerStatus(message) {
+    $('manager-status').textContent = message || '';
+  }
+
+  function managerMediaRow(id) {
+    for (var i = 0; i < state.mediaRows.length; i++) {
+      if (state.mediaRows[i].id === id) return state.mediaRows[i];
+    }
+    return null;
+  }
+
+  function setManagerPending(form, pending) {
+    Array.prototype.forEach.call(form.querySelectorAll('button, input, select'), function (control) {
+      control.disabled = pending;
+    });
+  }
+
+  function managerFormValue(form, name) {
+    return form.elements[name] ? form.elements[name].value.trim() : '';
+  }
+
+  function managerMediaFields(form, kind) {
+    return {
+      title: managerFormValue(form, 'title') || null,
+      alt_text: managerFormValue(form, 'alt_text') || null,
+      group_name: kind === 'spotify_image' ? managerFormValue(form, 'group_name') : null,
+      external_url: null,
+      published: true
+    };
+  }
+
+  function managerRowsFor(kind, groupName) {
+    return state.mediaRows.filter(function (row) {
+      return row.kind === kind && (row.group_name || '') === (groupName || '');
+    }).sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
+  }
+
+  function prepareManagerFile(file, kind) {
+    var check = window.NBContentModel.validateFile(file, kind);
+    if (!check.ok) return Promise.reject(new Error(check.message));
+    if (kind === 'canvas_video') {
+      return Promise.resolve({ blob: file, width: null, height: null });
+    }
+    return readScaled(file, MAX_EDGE).then(function (prepared) {
+      if (!prepared) throw new Error('The selected image could not be read.');
+      return prepared;
+    });
+  }
+
+  function managerStoragePath(kind, id, mimeType, replacement) {
+    var path = window.NBContentModel.storagePath(kind, id, mimeType);
+    return replacement ? path.replace(/(\.[^.]+)$/, '-' + Date.now() + '$1') : path;
+  }
+
+  function refreshAfterManagerWrite(message) {
+    return loadRemoteContent().then(function (loaded) {
+      if (!loaded) throw new Error('The content was saved, but the page could not refresh.');
+      managerStatus(message);
+      return true;
+    });
+  }
+
+  function saveMediaManagerForm(form, kind, isNew) {
+    var fields = managerMediaFields(form, kind);
+    var fileInput = form.elements.file;
+    var file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    var id = isNew ? uniqueId() : form.getAttribute('data-id');
+    var row = isNew ? null : managerMediaRow(id);
+    if (!isNew && !row) return Promise.reject(new Error('This content record could not be found.'));
+    if (isNew && !file) return Promise.reject(new Error('Choose a file first.'));
+
+    if (!file) {
+      return contentApi.updateMedia(id, fields).then(function () {
+        return refreshAfterManagerWrite('Changes saved.');
+      });
+    }
+
+    return prepareManagerFile(file, kind).then(function (prepared) {
+      prepared.id = id;
+      prepared.storagePath = managerStoragePath(kind, id, prepared.blob.type, !isNew);
+      prepared.fields = fields;
+      if (isNew) {
+        prepared.fields.slug = kind.replace(/_/g, '-') + '-' + id;
+        prepared.fields.kind = kind;
+        prepared.fields.sort_order = managerRowsFor(kind, fields.group_name).length;
+        return window.NBStudio.createMediaFileTransaction(contentApi, state.mediaRows, prepared);
+      }
+      return window.NBStudio.replaceMediaFileTransaction(contentApi, state.mediaRows, row, prepared);
+    }).then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      return refreshAfterManagerWrite(isNew ? 'Content added.' : 'File and details replaced.');
+    });
+  }
+
+  function saveYouTubeManagerForm(form) {
+    var id = form.getAttribute('data-id');
+    var url = managerFormValue(form, 'external_url');
+    var title = managerFormValue(form, 'title') || 'YouTube';
+    if (id) {
+      return window.NBStudio.saveYouTube(contentApi, { id: id }, url, {
+        title: title, alt_text: null, group_name: null, published: true
+      }).then(function (outcome) {
+        if (!outcome.ok) throw outcome.error;
+        return refreshAfterManagerWrite('YouTube video saved.');
+      });
+    }
+    var normalized = window.NBContentModel.normalizeYoutubeUrl(url);
+    if (!normalized) return Promise.reject(new Error('Enter a valid YouTube URL.'));
+    id = uniqueId();
+    return contentApi.insertMedia({
+      id: id,
+      slug: 'youtube-' + id,
+      kind: 'youtube',
+      group_name: null,
+      title: title,
+      alt_text: null,
+      external_url: normalized,
+      storage_path: null,
+      legacy_path: null,
+      mime_type: null,
+      aspect_width: null,
+      aspect_height: null,
+      sort_order: 0,
+      published: true
+    }).then(function () { return refreshAfterManagerWrite('YouTube video saved.'); });
+  }
+
+  function saveCvManagerForm(form, isNew) {
+    var category = isNew ? managerFormValue(form, 'category') : form.getAttribute('data-category');
+    var fields = {
+      category: category,
+      year: managerFormValue(form, 'year'),
+      description: managerFormValue(form, 'description'),
+      published: true
+    };
+    if (!fields.year || !fields.description) return Promise.reject(new Error('Enter both a year and description.'));
+    if (!isNew) {
+      return contentApi.updateCv(form.getAttribute('data-id'), fields)
+        .then(function () { return refreshAfterManagerWrite('CV entry saved.'); });
+    }
+    var id = uniqueId();
+    fields.id = id;
+    fields.slug = 'cv-' + id;
+    fields.sort_order = groupedCv()[category].length;
+    return contentApi.insertCv(fields).then(function () { return refreshAfterManagerWrite('CV entry added.'); });
+  }
+
+  function saveManagerForm(form) {
+    var kind = form.getAttribute('data-kind');
+    var isNew = form.getAttribute('data-new') === 'true';
+    setManagerPending(form, true);
+    managerStatus('Saving…');
+    var operation;
+    if (kind === 'cv') operation = saveCvManagerForm(form, isNew);
+    else if (kind === 'youtube') operation = saveYouTubeManagerForm(form);
+    else operation = saveMediaManagerForm(form, kind, isNew);
+    return operation.catch(function (error) {
+      managerStatus(error.message || 'The content could not be saved.');
+      return false;
+    }).then(function (outcome) {
+      setManagerPending(form, false);
+      return outcome;
+    });
+  }
+
+  function deleteManagerRow(form) {
+    var kind = form.getAttribute('data-kind');
+    var id = form.getAttribute('data-id');
+    var isCv = kind === 'cv';
+    var row = isCv ? state.cv.filter(function (entry) { return entry.id === id; })[0] : managerMediaRow(id);
+    if (!row) { managerStatus('This content record could not be found.'); return Promise.resolve(false); }
+    var label = row.title || row.description || kind;
+    if (!window.confirm('Delete “' + label + '” permanently? This cannot be undone.')) return Promise.resolve(false);
+    setManagerPending(form, true);
+    managerStatus('Deleting…');
+    var removeObject = !isCv && row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve();
+    return removeObject.then(function () {
+      return isCv ? contentApi.deleteCv(id) : contentApi.deleteMedia(id);
+    }).then(function () {
+      return refreshAfterManagerWrite('Content deleted.');
+    }).catch(function (error) {
+      managerStatus(error.message || 'The content could not be deleted.');
+      setManagerPending(form, false);
+      return false;
+    });
+  }
+
+  function moveManagerRow(form, direction) {
+    var kind = form.getAttribute('data-kind');
+    var id = form.getAttribute('data-id');
+    var rows;
+    var category = null;
+    var groupName = null;
+    var operation;
+    if (kind === 'cv') {
+      category = form.getAttribute('data-category');
+      rows = groupedCv()[category];
+    } else {
+      var row = managerMediaRow(id);
+      if (!row) { managerStatus('This content record could not be found.'); return Promise.resolve(false); }
+      groupName = row.group_name;
+      rows = managerRowsFor(kind, groupName);
+    }
+    var index = rows.map(function (item) { return item.id; }).indexOf(id);
+    var target = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= rows.length) return Promise.resolve(false);
+    var ids = rows.map(function (item) { return item.id; });
+    var moved = ids.splice(index, 1)[0];
+    ids.splice(target, 0, moved);
+    setManagerPending(form, true);
+    managerStatus('Saving order…');
+    operation = kind === 'cv'
+      ? window.NBStudio.persistCvOrder(contentApi, rows, category, ids)
+      : window.NBStudio.persistMediaOrder(contentApi, rows, kind, groupName, ids);
+    return operation.then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      return refreshAfterManagerWrite('Order saved.');
+    }).catch(function (error) {
+      managerStatus(error.message || 'The order could not be saved.');
+      setManagerPending(form, false);
+      return false;
+    });
+  }
+
   /* ---------- render ---------- */
 
   function render() {
@@ -657,6 +903,7 @@
     renderHero();
     renderStudio();
     renderLightbox();
+    renderManager();
     paintSlides();
   }
 
@@ -792,6 +1039,32 @@
       openPasswordGate();
     });
 
+    $('bar-manage').addEventListener('click', openManager);
+    $('manager-close').addEventListener('click', closeManager);
+    $('manager-body').addEventListener('submit', function (e) {
+      var form = e.target.closest('.manager__row');
+      if (!form) return;
+      e.preventDefault();
+      saveManagerForm(form);
+    });
+    $('manager-body').addEventListener('click', function (e) {
+      var section = e.target.closest('[data-manager-section]');
+      if (section) {
+        state.managerSection = section.getAttribute('data-manager-section');
+        renderManager();
+        var selected = $('manager-body').querySelector('[data-manager-section="' + state.managerSection + '"]');
+        if (selected) selected.focus();
+        return;
+      }
+      var action = e.target.closest('[data-manager-action]');
+      if (!action) return;
+      var form = action.closest('.manager__row');
+      if (!form) return;
+      var name = action.getAttribute('data-manager-action');
+      if (name === 'delete') deleteManagerRow(form);
+      if (name === 'up' || name === 'down') moveManagerRow(form, name);
+    });
+
     $('password-send-code').addEventListener('click', function () {
       $('password-status').textContent = 'Sending verification code…';
       studioController.requestPasswordChange().then(function (outcome) {
@@ -835,6 +1108,7 @@
       if (e.key !== 'Escape') return;
       if (!$('passgate').hidden) { closeGate(); return; }
       if (!$('passwordgate').hidden) { closePasswordGate(); return; }
+      if (!$('managergate').hidden) { closeManager(); return; }
       if (state.lbId) closeLightbox();
     });
 
@@ -905,13 +1179,33 @@
     if (studioReturnFocus && studioReturnFocus.focus) studioReturnFocus.focus();
   }
 
+  function openManager() {
+    if (!state.studio || !contentApi.configured) return;
+    state.managerOpen = true;
+    managerStatus('');
+    renderManager();
+    var selected = $('manager-body').querySelector('[data-manager-section][aria-selected="true"]');
+    if (selected) selected.focus();
+  }
+
+  function closeManager() {
+    state.managerOpen = false;
+    $('managergate').hidden = true;
+    managerStatus('');
+    $('bar-manage').focus();
+  }
+
   function setupStudioAuth() {
     studioController = window.NBStudio.create({
       auth: contentApi.configured ? contentApi.auth : null,
       isStudioUser: contentApi.configured ? contentApi.isStudioUser : function () { return Promise.resolve(false); },
       onStudioChange: function (on) {
         state.studio = on;
-        if (!on) state.lbId = null;
+        if (!on) {
+          state.lbId = null;
+          state.managerOpen = false;
+          $('managergate').hidden = true;
+        }
         state.status = on ? 'Signed in' : '';
         render();
       },
