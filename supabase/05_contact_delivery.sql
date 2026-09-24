@@ -18,18 +18,18 @@ declare
   checked_at timestamptz := clock_timestamp();
   allowed boolean;
 begin
-  if client_hash !~ '^[0-9a-f]{64}$' then
+  if consume_contact_rate_limit.client_hash !~ '^[0-9a-f]{64}$' then
     raise exception 'Invalid contact client hash' using errcode = '22023';
   end if;
 
-  perform pg_advisory_xact_lock(hashtextextended(client_hash, 0));
+  perform pg_advisory_xact_lock(hashtextextended(consume_contact_rate_limit.client_hash, 0));
   delete from public.contact_rate_limits
   where window_started_at < checked_at - interval '1 day';
 
   insert into public.contact_rate_limits as limits
     (client_hash, window_started_at, attempt_count)
-  values (client_hash, checked_at, 1)
-  on conflict (client_hash) do update set
+  values (consume_contact_rate_limit.client_hash, checked_at, 1)
+  on conflict on constraint contact_rate_limits_pkey do update set
     window_started_at = case
       when limits.window_started_at <= checked_at - interval '10 minutes' then checked_at
       else limits.window_started_at
@@ -38,7 +38,7 @@ begin
       when limits.window_started_at <= checked_at - interval '10 minutes' then 1
       else limits.attempt_count + 1
     end
-  returning attempt_count <= 5 into allowed;
+  returning limits.attempt_count <= 5 into allowed;
 
   return allowed;
 end;
