@@ -56,6 +56,40 @@ test('restores only an allowlisted session and observes sign-out', async functio
   assert.equal(controller.isStudio(), false);
 });
 
+test('defers allowlist checks outside the auth callback', async function () {
+  var checks = 0;
+  var auth = fakeAuth(null);
+  var controller = studio.create({
+    auth: auth,
+    isStudioUser: async function () { checks += 1; return true; }
+  });
+  await controller.init();
+  var returned = auth.state.listener('SIGNED_IN', { user: { id: 'artist' } });
+  assert.equal(returned, undefined);
+  assert.equal(checks, 0);
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.equal(checks, 1);
+  assert.equal(controller.isStudio(), true);
+});
+
+test('does not restore Studio when an obsolete allowlist check resolves after sign-out', async function () {
+  var resolveCheck;
+  var auth = fakeAuth(null);
+  var controller = studio.create({
+    auth: auth,
+    isStudioUser: function () {
+      return new Promise(function (resolve) { resolveCheck = resolve; });
+    }
+  });
+  await controller.init();
+  auth.state.listener('SIGNED_IN', { user: { id: 'artist' } });
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  auth.state.listener('SIGNED_OUT', null);
+  resolveCheck(true);
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.equal(controller.isStudio(), false);
+});
+
 test('rejects mismatched and weak passwords before calling Supabase', async function () {
   var auth = fakeAuth({ user: { id: 'artist' } });
   var controller = studio.create({ auth: auth, isStudioUser: async function () { return true; } });

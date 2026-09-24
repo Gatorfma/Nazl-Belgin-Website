@@ -57,6 +57,17 @@ begin
 end $$;
 
 do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname = 'studio_selects_site_media' and cmd = 'SELECT'
+  ) then
+    raise exception 'Authenticated Studio storage SELECT policy is missing';
+  end if;
+end $$;
+
+do $$
 declare
   studio_count integer;
 begin

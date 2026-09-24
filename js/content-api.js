@@ -145,7 +145,12 @@
       },
       remove: function (paths) {
         if (!paths || !paths.length) return Promise.resolve([]);
-        return unwrap(client.storage.from(BUCKET).remove(paths));
+        return unwrap(client.storage.from(BUCKET).remove(paths)).then(function (removed) {
+          if (!Array.isArray(removed) || removed.length !== paths.length) {
+            throw new Error('One or more storage objects could not be removed.');
+          }
+          return removed;
+        });
       }
     };
   }

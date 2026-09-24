@@ -31,6 +31,7 @@ test('renders privacy-enhanced YouTube, Canvas video and escaped Spotify groups'
   });
   assert.match(html.youtube, /youtube-nocookie\.com\/embed\/VriyhA6ayys/);
   assert.match(html.canvas, /Dream &lt;8&gt;/);
+  assert.match(html.canvas, /class="film is-in"/);
   assert.match(html.spotify, /A &amp; B/);
   assert.match(html.spotify, /Cover &quot;one&quot;/);
 });
@@ -49,6 +50,28 @@ test('manager renders every agreed section with escaped values and labelled cont
   assert.match(html, /A &amp; B/);
   assert.match(html, /&lt;Untitled&gt;/);
   assert.match(html, /Selected Exhibitions/);
-  assert.match(html, /data-manager-section="spotify"[^>]*aria-selected="true"/);
+  assert.match(html, /data-manager-section="spotify"[^>]*aria-current="page"/);
+  assert.doesNotMatch(html, /tabindex="-1"/);
   assert.doesNotMatch(html, /<Untitled>/);
+});
+
+test('clears removed singleton media and offers portrait creation when absent', function () {
+  var slots = {
+    'youtube-slot': { innerHTML: 'stale youtube' },
+    'films-grid': { innerHTML: 'stale films' },
+    'spotify-galleries': { innerHTML: 'stale spotify' },
+    'portrait-frame': { innerHTML: 'stale portrait' }
+  };
+  var root = { getElementById: function (id) { return slots[id] || null; } };
+  render.renderMedia(root, { youtube: null, canvasVideos: [], spotifyGroups: [] });
+  render.renderPortrait(root, null);
+  assert.equal(slots['youtube-slot'].innerHTML, '');
+  assert.equal(slots['portrait-frame'].innerHTML, '');
+
+  var html = render.managerHtml({
+    portrait: null, youtube: null, canvasVideos: [], spotifyGroups: [],
+    cv: { exhibition: [], project: [], fair: [] }
+  }, 'portrait');
+  assert.match(html, /data-kind="portrait" data-new="true"/);
+  assert.match(html, /type="file"[^>]*required/);
 });

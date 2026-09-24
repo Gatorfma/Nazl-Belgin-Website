@@ -29,7 +29,13 @@ function fakeSupabase(tables, options) {
     storage: {
       from: function () {
         return {
-          getPublicUrl: function (path) { return { data: { publicUrl: 'https://cdn.test/' + path } }; }
+          getPublicUrl: function (path) { return { data: { publicUrl: 'https://cdn.test/' + path } }; },
+          remove: function (paths) {
+            var value = Object.prototype.hasOwnProperty.call(options, 'removeResult')
+              ? options.removeResult
+              : paths.map(function (path) { return { name: path }; });
+            return Promise.resolve(queryResult(value));
+          }
         };
       }
     },
@@ -65,6 +71,18 @@ test('authorizes only an exact visible studio_users row', async function () {
   assert.equal(await api.isStudioUser('artist-id'), true);
   assert.equal(await api.isStudioUser('other-id'), false);
   assert.equal(await api.isStudioUser(''), false);
+});
+
+test('rejects storage deletion when Supabase confirms fewer objects than requested', async function () {
+  var api = apiModule.create({ url: 'https://project.supabase.co', publishableKey: 'key' },
+    fakeSupabase({}, { removeResult: [] }));
+  await assert.rejects(api.remove(['artworks/a.jpg']), /could not be removed/i);
+});
+
+test('assigns new rows after the greatest confirmed sort order', function () {
+  assert.equal(studio.nextSortOrder([{ sort_order: 0 }, { sort_order: 2 }]), 3);
+  assert.equal(studio.nextSortOrder([{ id: 'a' }, { id: 'b' }]), 2);
+  assert.equal(studio.nextSortOrder([]), 0);
 });
 
 function fakeMutationApi(options) {

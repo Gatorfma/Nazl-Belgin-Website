@@ -48,7 +48,7 @@
     }
 
     var canvas = (grouped.canvasVideos || []).map(function (item, index) {
-      return '<article class="film" data-id="' + esc(item.id) + '" data-reveal="remote-film-' + index + '">' +
+      return '<article class="film is-in" data-id="' + esc(item.id) + '" data-reveal="remote-film-' + index + '">' +
         '<div class="frame frame--film"><video class="film__video" src="' + esc(item.src) +
         '" aria-label="' + esc(item.title || 'Canvas video') +
         '" autoplay muted loop playsinline controls preload="metadata"></video></div></article>';
@@ -74,16 +74,20 @@
     var youtube = root.getElementById('youtube-slot');
     var films = root.getElementById('films-grid');
     var spotify = root.getElementById('spotify-galleries');
-    if (youtube && html.youtube) { youtube.innerHTML = html.youtube; changed = true; }
+    if (youtube) { youtube.innerHTML = html.youtube; changed = true; }
     if (films) { films.innerHTML = html.canvas; changed = true; }
     if (spotify) { spotify.innerHTML = html.spotify; changed = true; }
-    if (grouped && grouped.portrait) changed = renderPortrait(root, grouped.portrait) || changed;
+    changed = renderPortrait(root, grouped && grouped.portrait) || changed;
     return changed;
   }
 
   function renderPortrait(root, portrait) {
     var frame = root.getElementById('portrait-frame');
-    if (!frame || !portrait || !portrait.src) return false;
+    if (!frame) return false;
+    if (!portrait || !portrait.src) {
+      frame.innerHTML = '';
+      return true;
+    }
     var size = '';
     if (portrait.ratio) {
       var parts = portrait.ratio.split('/').map(function (value) { return value.trim(); });
@@ -146,8 +150,8 @@
     ];
     var nav = sections.map(function (section) {
       var selected = section[0] === activeSection;
-      return '<button type="button" role="tab" data-manager-section="' + section[0] +
-        '" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '">' +
+      return '<button type="button" data-manager-section="' + section[0] +
+        '"' + (selected ? ' aria-current="page"' : '') + '>' +
         section[1] + '</button>';
     }).join('');
     var body = '';
@@ -156,7 +160,12 @@
       body = '<h3>Portrait</h3><p class="manager__instruction">Replace the About portrait or update its accessible description.</p>' +
         (data.portrait ? mediaRow(data.portrait, 'portrait', {
           fileLabel: 'Replacement image', accept: 'image/jpeg,image/png,image/webp', canMove: false
-        }) : '<p>No portrait is published.</p>');
+        }) : '<form class="manager__row manager__row--new" data-kind="portrait" data-new="true">' +
+          managerField('Title', 'title', 'Portrait') +
+          managerField('Alternative text', 'alt_text', 'Portrait of Nazlı Belgin', { required: false }) +
+          managerField('Image file', 'file', '', {
+            type: 'file', attrs: 'accept="image/jpeg,image/png,image/webp"'
+          }) + '<div class="manager__actions"><button type="submit">Add portrait</button></div></form>');
     }
 
     if (activeSection === 'canvas') {
@@ -215,8 +224,8 @@
         }).join('');
     }
 
-    return '<div class="manager__layout"><nav class="manager__nav" role="tablist" aria-label="Content sections, including Selected Exhibitions">' +
-      nav + '</nav><div class="manager__content" role="tabpanel">' + body + '</div></div>';
+    return '<div class="manager__layout"><nav class="manager__nav" aria-label="Content sections, including Selected Exhibitions">' +
+      nav + '</nav><div class="manager__content">' + body + '</div></div>';
   }
 
   return {

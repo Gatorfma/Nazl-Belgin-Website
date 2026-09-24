@@ -2,6 +2,7 @@ param(
   [string]$ProjectUrl,
   [string]$PublishableKey,
   [switch]$DryRun,
+  [switch]$FunctionsOnly,
   [string]$RowsFile
 )
 
@@ -44,11 +45,33 @@ function Get-StatusCode($ErrorRecord) {
   try { return [int]$ErrorRecord.Exception.Response.StatusCode } catch { return 0 }
 }
 
+function Get-RowUri([string]$Table, [string]$Id) {
+  return "$ProjectUrl/rest/v1/${Table}?id=eq.$([uri]::EscapeDataString($Id))"
+}
+
 function Get-RemoteStoragePath([string]$Table, [string]$Id, $Headers) {
-  $uri = "$ProjectUrl/rest/v1/$Table?id=eq.$([uri]::EscapeDataString($Id))&select=storage_path"
+  $uri = "$(Get-RowUri $Table $Id)&select=storage_path"
   $rows = @(Invoke-RestMethod -Method Get -Uri $uri -Headers $Headers)
   if ($rows.Count -eq 1) { return [string]$rows[0].storage_path }
   return ''
+}
+
+function Test-RemoteObjectMatches([string]$EncodedPath, [string]$SourcePath, $MimeInfo) {
+  $downloadPath = [IO.Path]::GetTempFileName()
+  try {
+    $response = Invoke-WebRequest -UseBasicParsing -Method Head -Uri "$ProjectUrl/storage/v1/object/public/$bucket/$EncodedPath"
+    $remoteLength = [int64]$response.Headers['Content-Length']
+    $remoteType = ([string]$response.Headers['Content-Type']).Split(';')[0].Trim()
+    $localLength = (Get-Item -LiteralPath $SourcePath).Length
+    if ($remoteLength -ne $localLength -or $remoteType -ne $MimeInfo.Mime) { return $false }
+    Invoke-WebRequest -UseBasicParsing -Uri "$ProjectUrl/storage/v1/object/public/$bucket/$EncodedPath" -OutFile $downloadPath | Out-Null
+    return (Get-FileHash -Algorithm SHA256 -LiteralPath $downloadPath).Hash -eq
+      (Get-FileHash -Algorithm SHA256 -LiteralPath $SourcePath).Hash
+  } catch {
+    return $false
+  } finally {
+    if (Test-Path -LiteralPath $downloadPath) { Remove-Item -LiteralPath $downloadPath -Force }
+  }
 }
 
 function Get-LiveRows($Headers) {
@@ -69,6 +92,8 @@ function Get-LiveRows($Headers) {
   }
   return $rows
 }
+
+if ($FunctionsOnly) { return }
 
 if ($RowsFile) {
   $resolvedRowsFile = (Resolve-Path -LiteralPath $RowsFile).Path
@@ -137,6 +162,7 @@ foreach ($row in $rows) {
 
     if ($DryRun) {
       Write-Output "MIGRATE $id $($row.legacy_path) -> $storagePath"
+      Write-Output "PATCH $(Get-RowUri $table $id) storage_path=$storagePath"
       $migrated++
       continue
     }
@@ -155,11 +181,15 @@ foreach ($row in $rows) {
         $skipped++
         continue
       }
-      throw
+      if ($conflict -and (Test-RemoteObjectMatches $encodedPath $sourcePath $mime)) {
+        Write-Output "RESUME $id verified existing object $storagePath"
+      } else {
+        throw
+      }
     }
 
     $patchBody = @{ storage_path = $storagePath } | ConvertTo-Json
-    Invoke-RestMethod -Method Patch -Uri "$ProjectUrl/rest/v1/$table?id=eq.$([uri]::EscapeDataString($id))" -Headers @{
+    Invoke-RestMethod -Method Patch -Uri (Get-RowUri $table $id) -Headers @{
       apikey = $PublishableKey
       Authorization = $headers.Authorization
       Prefer = 'return=minimal'

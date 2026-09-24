@@ -22,6 +22,13 @@
     return error.message || fallback;
   }
 
+  function nextSortOrder(rows) {
+    return (rows || []).reduce(function (next, row, index) {
+      var order = Number(row && (row.sort_order == null ? row.sortOrder : row.sort_order));
+      return Number.isFinite(order) ? Math.max(next, order + 1) : Math.max(next, index + 1);
+    }, 0);
+  }
+
   function createArtworkTransaction(api, previousWorks, prepared) {
     var path = model.storagePath('artwork', prepared.id, prepared.blob.type || prepared.file.type);
     var row = {
@@ -36,7 +43,7 @@
       legacy_path: null,
       aspect_width: prepared.width,
       aspect_height: prepared.height,
-      sort_order: previousWorks.length,
+      sort_order: prepared.sortOrder == null ? nextSortOrder(previousWorks) : prepared.sortOrder,
       published: true
     };
     return Promise.resolve(api.upload(path, prepared.blob)).then(function () {
@@ -185,30 +192,35 @@
     var onLoginRequest = options.onLoginRequest || function () {};
     var studioOn = false;
     var subscription = null;
+    var authGeneration = 0;
 
     function setStudio(on) {
       studioOn = Boolean(on);
       onStudioChange(studioOn);
     }
 
-    function authorize(session) {
+    function authorize(session, generation) {
       var user = session && session.user;
       if (!user || !user.id) {
-        setStudio(false);
+        if (generation === authGeneration) setStudio(false);
         return Promise.resolve(result(false, ''));
       }
       return Promise.resolve(isStudioUser(user.id)).then(function (allowed) {
+        if (generation !== authGeneration) return result(false, '');
         if (!allowed) {
+          authGeneration += 1;
+          setStudio(false);
           return Promise.resolve(auth.signOut()).catch(function () {}).then(function () {
-            setStudio(false);
             return result(false, 'Studio access is not enabled for this account.');
           });
         }
         setStudio(true);
         return result(true, 'Signed in.');
       }).catch(function () {
+        if (generation !== authGeneration) return result(false, '');
+        authGeneration += 1;
+        setStudio(false);
         return Promise.resolve(auth.signOut()).catch(function () {}).then(function () {
-          setStudio(false);
           return result(false, 'Studio access could not be verified.');
         });
       });
@@ -217,16 +229,18 @@
     function observeAuth() {
       if (!auth || typeof auth.onAuthStateChange !== 'function' || subscription) return;
       var observed = auth.onAuthStateChange(function (event, session) {
+        var generation = ++authGeneration;
         if (event === 'PASSWORD_RECOVERY') {
           onRecovery();
-          return Promise.resolve();
+          return;
         }
         if (event === 'SIGNED_OUT') {
           setStudio(false);
-          return Promise.resolve();
+          return;
         }
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') return authorize(session);
-        return Promise.resolve();
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setTimeout(function () { authorize(session, generation); }, 0);
+        }
       });
       subscription = observed && observed.data ? observed.data.subscription : null;
     }
@@ -236,7 +250,8 @@
         if (!auth) return Promise.resolve(result(false, 'Supabase is not configured.'));
         observeAuth();
         return Promise.resolve(auth.getSession()).then(function (data) {
-          return authorize(data && data.session);
+          var generation = ++authGeneration;
+          return authorize(data && data.session, generation);
         }).catch(function (error) {
           setStudio(false);
           return result(false, messageFor(error, 'Studio session could not be restored.'));
@@ -246,16 +261,19 @@
       login: function (email, password) {
         if (!auth) return Promise.resolve(result(false, 'Supabase is not configured.'));
         return Promise.resolve(auth.signIn(email, password)).then(function (data) {
-          return authorize(data && data.session);
+          var generation = ++authGeneration;
+          return authorize(data && data.session, generation);
         }).catch(function (error) {
+          authGeneration += 1;
           setStudio(false);
           return result(false, messageFor(error, 'Email or password was not accepted.'));
         });
       },
       signOut: function () {
         if (!auth) { setStudio(false); return Promise.resolve(result(true, 'Signed out.')); }
+        authGeneration += 1;
+        setStudio(false);
         return Promise.resolve(auth.signOut()).then(function () {
-          setStudio(false);
           return result(true, 'Signed out.');
         }).catch(function (error) {
           return result(false, messageFor(error, 'Could not sign out.'));
@@ -301,6 +319,7 @@
     createMediaFileTransaction: createMediaFileTransaction,
     replaceMediaFileTransaction: replaceMediaFileTransaction,
     saveYouTube: saveYouTube,
+    nextSortOrder: nextSortOrder,
     persistMediaOrder: persistMediaOrder,
     persistCvOrder: persistCvOrder,
     persistOrder: persistOrder

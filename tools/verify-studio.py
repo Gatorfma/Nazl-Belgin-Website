@@ -103,6 +103,15 @@ for forbidden_source in ("nb-works-v1", "catalogueStamp", "localStorage"):
 if "signUp" in html or "Sign up" in html:
     raise SystemExit("Studio must not expose public sign-up")
 
+patch_body = site_js.split("function patch(id, fields, note)", 1)[1].split("function canDrag()", 1)[0]
+if "loadRemoteContent()" in patch_body:
+    raise SystemExit("Artwork field saves must not reload and erase the active edit form")
+if "normalizeArtwork" not in patch_body:
+    raise SystemExit("Artwork field saves must apply the confirmed row locally")
+for helper in ("captureManagerDrafts", "restoreManagerDrafts"):
+    if f"function {helper}" not in site_js:
+        raise SystemExit(f"Manager refreshes must define {helper}")
+
 required_scripts = [
     "@supabase/supabase-js@2.117.0/dist/umd/supabase.min.js",
     "js/supabase-config.js?v=",

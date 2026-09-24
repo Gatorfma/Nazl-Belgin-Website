@@ -159,6 +159,9 @@ on conflict (id) do update set
 drop policy if exists studio_inserts_site_media on storage.objects;
 create policy studio_inserts_site_media on storage.objects for insert to authenticated
 with check (bucket_id = 'site-media' and public.is_studio_user());
+drop policy if exists studio_selects_site_media on storage.objects;
+create policy studio_selects_site_media on storage.objects for select to authenticated
+using (bucket_id = 'site-media' and public.is_studio_user());
 drop policy if exists studio_updates_site_media on storage.objects;
 create policy studio_updates_site_media on storage.objects for update to authenticated
 using (bucket_id = 'site-media' and public.is_studio_user())

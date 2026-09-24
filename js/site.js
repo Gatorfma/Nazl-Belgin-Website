@@ -229,9 +229,19 @@
       dbFields[dbKey] = value === '' ? null : value;
     });
     setStatus('Saving…');
-    return contentApi.updateArtwork(id, dbFields).then(function () {
-      return loadRemoteContent();
-    }).then(function () {
+    return contentApi.updateArtwork(id, dbFields).then(function (updated) {
+      var rowIndex = state.artworkRows.map(function (row) { return row.id; }).indexOf(id);
+      var workIndex = state.works.map(function (work) { return work.id; }).indexOf(id);
+      if (rowIndex >= 0) state.artworkRows[rowIndex] = updated;
+      if (workIndex >= 0) {
+        state.works[workIndex] = window.NBContentModel.normalizeArtwork(updated, contentApi.publicUrl);
+      }
+      renderFilters();
+      renderWorks();
+      renderHero();
+      renderStudio();
+      paintSlides();
+      document.dispatchEvent(new CustomEvent('nb:content-updated'));
       setStatus(note || 'Saved');
       return true;
     }).catch(function (error) {
@@ -634,7 +644,8 @@
             year: new Date().getFullYear(),
             series: 'Monsters',
             medium: 'Oil on canvas',
-            dimensions: ''
+            dimensions: '',
+            sortOrder: window.NBStudio.nextSortOrder(state.artworkRows)
           }).then(function (outcome) {
             if (!outcome.ok) throw outcome.error;
             added += 1;
@@ -725,9 +736,65 @@
     return replacement ? path.replace(/(\.[^.]+)$/, '-' + Date.now() + '$1') : path;
   }
 
-  function refreshAfterManagerWrite(message) {
+  function managerFormKey(form) {
+    return [
+      form.getAttribute('data-kind') || '',
+      form.getAttribute('data-id') || 'new',
+      form.getAttribute('data-category') || ''
+    ].join('|');
+  }
+
+  function captureManagerDrafts(excludedForm) {
+    var root = $('manager-body');
+    var snapshot = { values: {}, fileInputs: {}, focus: null };
+    if (!root) return snapshot;
+    Array.prototype.forEach.call(root.querySelectorAll('.manager__row'), function (form) {
+      var key = managerFormKey(form);
+      if (form !== excludedForm) {
+        snapshot.values[key] = {};
+        snapshot.fileInputs[key] = {};
+        Array.prototype.forEach.call(form.querySelectorAll('input[name], select[name], textarea[name]'), function (control) {
+          if (control.type === 'file') {
+            if (control.files && control.files.length) snapshot.fileInputs[key][control.name] = control;
+          } else {
+            snapshot.values[key][control.name] = control.value;
+          }
+        });
+      }
+      if (form.contains(document.activeElement)) {
+        var controls = Array.prototype.slice.call(form.querySelectorAll('input, select, textarea, button'));
+        snapshot.focus = { key: key, index: controls.indexOf(document.activeElement) };
+      }
+    });
+    return snapshot;
+  }
+
+  function restoreManagerDrafts(snapshot) {
+    if (!snapshot) return;
+    var forms = Array.prototype.slice.call($('manager-body').querySelectorAll('.manager__row'));
+    forms.forEach(function (form) {
+      var values = snapshot.values[managerFormKey(form)];
+      if (!values) return;
+      Object.keys(values).forEach(function (name) {
+        if (form.elements[name] && form.elements[name].type !== 'file') form.elements[name].value = values[name];
+      });
+      Object.keys(snapshot.fileInputs[managerFormKey(form)] || {}).forEach(function (name) {
+        var current = form.elements[name];
+        if (current && current.type === 'file') current.replaceWith(snapshot.fileInputs[managerFormKey(form)][name]);
+      });
+    });
+    if (!snapshot.focus) return;
+    var focusForm = forms.filter(function (form) { return managerFormKey(form) === snapshot.focus.key; })[0];
+    if (!focusForm) return;
+    var controls = focusForm.querySelectorAll('input, select, textarea, button');
+    if (controls[snapshot.focus.index]) controls[snapshot.focus.index].focus();
+  }
+
+  function refreshAfterManagerWrite(message, submittedForm) {
+    var drafts = captureManagerDrafts(submittedForm);
     return loadRemoteContent().then(function (loaded) {
       if (!loaded) throw new Error('The content was saved, but the page could not refresh.');
+      restoreManagerDrafts(drafts);
       managerStatus(message);
       return true;
     });
@@ -741,10 +808,13 @@
     var row = isNew ? null : managerMediaRow(id);
     if (!isNew && !row) return Promise.reject(new Error('This content record could not be found.'));
     if (isNew && !file) return Promise.reject(new Error('Choose a file first.'));
+    if (!isNew && kind === 'spotify_image' && (row.group_name || '') !== (fields.group_name || '')) {
+      fields.sort_order = window.NBStudio.nextSortOrder(managerRowsFor(kind, fields.group_name));
+    }
 
     if (!file) {
       return contentApi.updateMedia(id, fields).then(function () {
-        return refreshAfterManagerWrite('Changes saved.');
+        return refreshAfterManagerWrite('Changes saved.', form);
       });
     }
 
@@ -755,13 +825,13 @@
       if (isNew) {
         prepared.fields.slug = kind.replace(/_/g, '-') + '-' + id;
         prepared.fields.kind = kind;
-        prepared.fields.sort_order = managerRowsFor(kind, fields.group_name).length;
+        prepared.fields.sort_order = window.NBStudio.nextSortOrder(managerRowsFor(kind, fields.group_name));
         return window.NBStudio.createMediaFileTransaction(contentApi, state.mediaRows, prepared);
       }
       return window.NBStudio.replaceMediaFileTransaction(contentApi, state.mediaRows, row, prepared);
     }).then(function (outcome) {
       if (!outcome.ok) throw outcome.error;
-      return refreshAfterManagerWrite(isNew ? 'Content added.' : 'File and details replaced.');
+      return refreshAfterManagerWrite(isNew ? 'Content added.' : 'File and details replaced.', form);
     });
   }
 
@@ -774,7 +844,7 @@
         title: title, alt_text: null, group_name: null, published: true
       }).then(function (outcome) {
         if (!outcome.ok) throw outcome.error;
-        return refreshAfterManagerWrite('YouTube video saved.');
+        return refreshAfterManagerWrite('YouTube video saved.', form);
       });
     }
     var normalized = window.NBContentModel.normalizeYoutubeUrl(url);
@@ -795,7 +865,7 @@
       aspect_height: null,
       sort_order: 0,
       published: true
-    }).then(function () { return refreshAfterManagerWrite('YouTube video saved.'); });
+    }).then(function () { return refreshAfterManagerWrite('YouTube video saved.', form); });
   }
 
   function saveCvManagerForm(form, isNew) {
@@ -809,13 +879,13 @@
     if (!fields.year || !fields.description) return Promise.reject(new Error('Enter both a year and description.'));
     if (!isNew) {
       return contentApi.updateCv(form.getAttribute('data-id'), fields)
-        .then(function () { return refreshAfterManagerWrite('CV entry saved.'); });
+        .then(function () { return refreshAfterManagerWrite('CV entry saved.', form); });
     }
     var id = uniqueId();
     fields.id = id;
     fields.slug = 'cv-' + id;
-    fields.sort_order = groupedCv()[category].length;
-    return contentApi.insertCv(fields).then(function () { return refreshAfterManagerWrite('CV entry added.'); });
+    fields.sort_order = window.NBStudio.nextSortOrder(groupedCv()[category]);
+    return contentApi.insertCv(fields).then(function () { return refreshAfterManagerWrite('CV entry added.', form); });
   }
 
   function saveManagerForm(form) {
@@ -850,7 +920,7 @@
     return removeObject.then(function () {
       return isCv ? contentApi.deleteCv(id) : contentApi.deleteMedia(id);
     }).then(function () {
-      return refreshAfterManagerWrite('Content deleted.');
+      return refreshAfterManagerWrite('Content deleted.', form);
     }).catch(function (error) {
       managerStatus(error.message || 'The content could not be deleted.');
       setManagerPending(form, false);
@@ -1184,7 +1254,7 @@
     state.managerOpen = true;
     managerStatus('');
     renderManager();
-    var selected = $('manager-body').querySelector('[data-manager-section][aria-selected="true"]');
+    var selected = $('manager-body').querySelector('[data-manager-section][aria-current="page"]');
     if (selected) selected.focus();
   }
 
