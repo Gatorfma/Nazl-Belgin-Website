@@ -23,8 +23,11 @@
   }
 
   function asError(error) {
-    if (error instanceof Error) return error;
-    return new Error(error && error.message ? error.message : 'Supabase request failed.');
+    var converted = error instanceof Error
+      ? error
+      : new Error(error && error.message ? error.message : 'Supabase request failed.');
+    if (error && error.context && error.context.status) converted.status = error.context.status;
+    return converted;
   }
 
   function unconfigured() {
@@ -32,6 +35,7 @@
     return {
       configured: false,
       loadAll: reject,
+      sendContact: reject,
       publicUrl: function () { return ''; },
       isStudioUser: function () { return Promise.resolve(false); },
       auth: {
@@ -118,6 +122,9 @@
         if (!path) return '';
         var result = client.storage.from(BUCKET).getPublicUrl(path);
         return result && result.data ? result.data.publicUrl : '';
+      },
+      sendContact: function (payload) {
+        return unwrap(client.functions.invoke('send-contact', { body: payload }));
       },
       isStudioUser: function (userId) {
         if (!userId) return Promise.resolve(false);

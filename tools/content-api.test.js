@@ -40,6 +40,9 @@ function fakeSupabase(tables, options) {
       }
     },
     auth: options.auth || {},
+    functions: {
+      invoke: options.invoke || function () { return Promise.resolve({ data: null, error: null }); }
+    },
     rpc: function () { return Promise.resolve({ data: null, error: null }); }
   };
   return { createClient: function () { return client; } };
@@ -57,6 +60,30 @@ test('loads successful sections while reporting a failed section independently',
 test('stays unconfigured when URL or publishable key is empty or URL is untrusted', function () {
   assert.equal(apiModule.create({ url: '', publishableKey: '' }, fakeSupabase({})).configured, false);
   assert.equal(apiModule.create({ url: 'https://example.com', publishableKey: 'key' }, fakeSupabase({})).configured, false);
+});
+
+test('invokes the contact Edge Function with the submitted fields', async function () {
+  var calls = [];
+  var api = apiModule.create({ url: 'https://project.supabase.co', publishableKey: 'key' }, fakeSupabase({}, {
+    invoke: async function (name, options) {
+      calls.push({ name: name, body: options.body });
+      return { data: { ok: true }, error: null };
+    }
+  }));
+  var fields = { name: 'A', email: 'a@b.co', message: 'Hi', website: '' };
+  assert.deepEqual(await api.sendContact(fields), { ok: true });
+  assert.deepEqual(calls, [{ name: 'send-contact', body: fields }]);
+});
+
+test('preserves the Edge Function HTTP status and rejects when unconfigured', async function () {
+  var api = apiModule.create({ url: 'https://project.supabase.co', publishableKey: 'key' }, fakeSupabase({}, {
+    invoke: async function () {
+      return { data: null, error: { message: 'rate limited', context: { status: 429 } } };
+    }
+  }));
+  await assert.rejects(api.sendContact({}), function (error) { return error.status === 429; });
+  var unavailable = apiModule.create({ url: '', publishableKey: '' }, fakeSupabase({}));
+  await assert.rejects(unavailable.sendContact({}), /not configured/i);
 });
 
 test('resolves public object URLs from the fixed site-media bucket', function () {
