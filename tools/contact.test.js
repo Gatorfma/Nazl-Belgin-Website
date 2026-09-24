@@ -46,3 +46,9 @@ test('maps rate limiting separately from a generic send failure', async function
   assert.equal(generic.ok, false);
   assert.match(generic.message, /did not send/i);
 });
+
+test('maps a missing sender function to inline failure instead of throwing', async function () {
+  var result = await contact.submit(undefined, valid);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /did not send/i);
+});

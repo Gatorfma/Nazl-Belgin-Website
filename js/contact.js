@@ -33,7 +33,9 @@
   function submit(sendContact, fields) {
     var checked = validate(fields);
     if (!checked.ok) return Promise.resolve(checked);
-    return Promise.resolve(sendContact(checked.value)).then(function () {
+    return Promise.resolve().then(function () {
+      return sendContact(checked.value);
+    }).then(function () {
       return { ok: true, message: 'Received. A reply comes when the paint allows.' };
     }).catch(function (error) {
       if (error && error.status === 429) {

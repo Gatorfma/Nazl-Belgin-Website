@@ -183,6 +183,18 @@
     }, previousRows, orderedIds);
   }
 
+  function deleteFileBackedRecord(deleteRow, removeObject) {
+    return Promise.resolve().then(deleteRow).then(function (deleted) {
+      return Promise.resolve().then(removeObject).then(function () {
+        return { ok: true, row: deleted };
+      }).catch(function (cleanupError) {
+        return { ok: true, row: deleted, cleanupError: cleanupError };
+      });
+    }).catch(function (error) {
+      return { ok: false, error: error };
+    });
+  }
+
   function create(options) {
     options = options || {};
     var auth = options.auth;
@@ -322,6 +334,7 @@
     nextSortOrder: nextSortOrder,
     persistMediaOrder: persistMediaOrder,
     persistCvOrder: persistCvOrder,
-    persistOrder: persistOrder
+    persistOrder: persistOrder,
+    deleteFileBackedRecord: deleteFileBackedRecord
   };
 });

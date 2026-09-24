@@ -12,6 +12,41 @@ const json = (body, status, extra = {}) => new Response(JSON.stringify(body), {
   headers: { ...extra, 'Content-Type': 'application/json' }
 });
 
+async function readLimitedBody(request, limit) {
+  if (!request.body || typeof request.body.getReader !== 'function') {
+    try {
+      const text = await request.text();
+      return new TextEncoder().encode(text).byteLength > limit ? { tooLarge: true } : { text };
+    } catch {
+      return { error: true };
+    }
+  }
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > limit) {
+        Promise.resolve(reader.cancel()).catch(() => {});
+        return { tooLarge: true };
+      }
+      chunks.push(part.value);
+    }
+  } catch {
+    return { error: true };
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { text: new TextDecoder().decode(bytes) };
+}
+
 export function createContactHandler(deps) {
   return async function handle(request) {
     const origin = request.headers.get('origin') || '';
@@ -24,10 +59,12 @@ export function createContactHandler(deps) {
     }
     const declared = Number(request.headers.get('content-length') || 0);
     if (declared > 16384) return json({ ok: false, code: 'too_large' }, 413, headers);
-    const raw = await request.text();
-    if (new TextEncoder().encode(raw).byteLength > 16384) {
+    const received = await readLimitedBody(request, 16384);
+    if (received.tooLarge) {
       return json({ ok: false, code: 'too_large' }, 413, headers);
     }
+    if (received.error) return json({ ok: false, code: 'invalid_body' }, 400, headers);
+    const raw = received.text;
     let body;
     try {
       body = JSON.parse(raw);

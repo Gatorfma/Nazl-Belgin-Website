@@ -86,7 +86,7 @@
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
             <summary>Youtube</summary>
             <div class="artworks__reveal">
-              <div class="artworks__media-slot" data-youtube-slot>
+              <div class="artworks__media-slot" id="youtube-slot" data-youtube-slot>
                 <iframe
                   src="https://www.youtube-nocookie.com/embed/VriyhA6ayys"
                   title="Nazlı Belgin video on YouTube"
@@ -104,6 +104,7 @@
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
             <summary>Spotify</summary>
             <div class="artworks__reveal artworks__reveal--spotify">
+              <div id="spotify-galleries">
               <details class="artworks__artist" data-artist-disclosure>
                 <summary>Irmak Akıncı</summary>
                 <div class="artworks__artist-gallery artworks__artist-gallery--large" aria-label="Irmak Akıncı artworks">
@@ -134,6 +135,7 @@
                   <img src="art/hümeyra/image00008.png" alt="Spotify artwork for Hümeyra, 2" loading="lazy">
                 </div>
               </details>
+              </div>
             </div>
           </details>
         </article>
@@ -207,7 +209,7 @@
         <p class="bio-beat bio-beat--lead">Nazlı Belgin was born in 1985 in Tekirdağ, Turkey, and has been interested in art since childhood.</p>
       </div>
       <figure class="about__portrait">
-        <div class="frame frame--portrait">
+        <div class="frame frame--portrait" id="portrait-frame">
           <img class="about__portrait-img" src="art/portrait/nazlı.jpg" alt="Portrait of Nazlı Belgin" width="1929" height="2411">
         </div>
       </figure>
@@ -224,7 +226,7 @@
   <div class="cv">
     <div>
       <h3 class="h3">Selected Exhibitions</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-exhibitions">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Stone Hills Zero — Espacio Gallery, London (solo)</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Gözlerimi Kapadım — H Art Project Galeri (group exhibition)</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">International Art &amp; Design Group Exhibition — Art Factor Gallery</span></div>
@@ -235,7 +237,7 @@
     </div>
     <div>
       <h3 class="h3">Art Projects</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-projects">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Hümeyra — Spotify Canvas illustrations</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Feridun Hürel — Spotify Canvas illustrations</span></div>
         <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Pianist Irmak Akıncı — album cover and Spotify Canvas illustrations</span></div>
@@ -243,7 +245,7 @@
         <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">Nature Art Çalıştayı — Gaziantep</span></div>
       </div>
       <h3 class="h3 h3--gap">Art Fairs</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-fairs">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Nouva Sanat Fuarı — 7 Art Galeri, Ankara</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Concept Sanat Fuarı — Historia Art Studio, Adana</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">IAAF — 3K Galeri, İzmir</span></div>
@@ -291,24 +293,69 @@
 
 </div>
 
-<div class="passgate" id="passgate" hidden>
+<div class="passgate" id="passgate" role="dialog" aria-modal="true" aria-labelledby="studio-login-title" hidden>
   <form class="passgate__form" id="pass-form">
-    <h3 class="passgate__title">Studio access</h3>
-    <p class="passgate__note">For Nazlı only. Enter the studio passcode to upload, edit and rearrange works.</p>
-    <input class="passgate__input" type="password" id="pass-input" placeholder="Passcode" autocomplete="current-password">
-    <p class="passgate__error" id="pass-error" hidden>That isn't it. Try again.</p>
+    <h3 class="passgate__title" id="studio-login-title">Studio access</h3>
+    <p class="passgate__note">For Nazlı only. Sign in with the invited Studio account.</p>
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input class="passgate__input" type="email" id="studio-email" autocomplete="username" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input class="passgate__input" type="password" id="studio-password" autocomplete="current-password" required>
+    </label>
+    <p class="passgate__error" id="pass-error" role="status" aria-live="polite"></p>
     <div class="passgate__actions">
-      <button class="btn btn--solid" type="submit">Enter</button>
+      <button class="btn btn--solid" type="submit" id="studio-submit">Sign in</button>
       <button class="btn btn--ghost" type="button" id="pass-cancel">Cancel</button>
     </div>
+    <button class="passgate__link" type="button" id="studio-forgot">Forgot password?</button>
   </form>
+</div>
+
+<div class="passgate" id="passwordgate" role="dialog" aria-modal="true" aria-labelledby="password-title" hidden>
+  <form class="passgate__form" id="password-form">
+    <h3 class="passgate__title" id="password-title">Change password</h3>
+    <p class="passgate__note">Request a verification code by email, then choose a new password.</p>
+    <button class="btn btn--ghost" type="button" id="password-send-code">Email verification code</button>
+    <label class="field">
+      <span class="field__label">Six-digit code</span>
+      <input class="passgate__input" type="text" id="password-nonce" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+    </label>
+    <label class="field">
+      <span class="field__label">New password</span>
+      <input class="passgate__input" type="password" id="password-new" autocomplete="new-password" minlength="12" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Confirm password</span>
+      <input class="passgate__input" type="password" id="password-confirm" autocomplete="new-password" minlength="12" required>
+    </label>
+    <p class="passgate__error" id="password-status" role="status" aria-live="polite"></p>
+    <div class="passgate__actions">
+      <button class="btn btn--solid" type="submit" id="password-submit">Change password</button>
+      <button class="btn btn--ghost" type="button" id="password-cancel">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<div class="manager" id="managergate" role="dialog" aria-modal="true" aria-labelledby="manager-title" aria-describedby="manager-status" hidden>
+  <div class="manager__shell">
+    <header class="manager__header">
+      <h2 id="manager-title">Manage content</h2>
+      <p id="manager-status" role="status" aria-live="polite"></p>
+      <button class="manager__close" type="button" id="manager-close">Close</button>
+    </header>
+    <div id="manager-body"></div>
+  </div>
 </div>
 
 <div class="studiobar" id="studiobar" hidden>
   <span class="studiobar__tag">Studio mode</span>
   <span class="studiobar__status" id="studio-status"></span>
   <button class="btn btn--bar" type="button" id="bar-upload">Upload</button>
-  <button class="btn btn--bar btn--bar-mute" type="button" id="bar-reset">Reset</button>
+  <button class="btn btn--bar" type="button" id="bar-manage">Manage content</button>
+  <button class="btn btn--bar btn--bar-mute" type="button" id="bar-password">Change password</button>
   <button class="btn btn--bar" type="button" id="bar-signout">Sign out</button>
 </div>
 

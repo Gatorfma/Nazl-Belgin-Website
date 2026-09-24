@@ -82,6 +82,47 @@ test('rejects malformed, invalid, spam and oversized bodies before dependencies'
   assert.deepEqual({ hash: calls.hash, limit: calls.limit, send: calls.send }, { hash: 0, limit: 0, send: 0 });
 });
 
+test('stops reading an unknown-length stream immediately after 16 KiB', async () => {
+  let streamController;
+  const stream = new ReadableStream({
+    start(controller) {
+      streamController = controller;
+      controller.enqueue(new Uint8Array(16385));
+    }
+  });
+  const input = new Request('https://project.supabase.co/functions/v1/send-contact', {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:8000', 'Content-Type': 'application/json' },
+    body: stream,
+    duplex: 'half'
+  });
+  const pending = createContactHandler(dependencies().deps)(input);
+  const early = await Promise.race([
+    pending,
+    new Promise((resolve) => setTimeout(() => resolve('still-reading'), 50))
+  ]);
+  if (early === 'still-reading') streamController.close();
+  assert.notEqual(early, 'still-reading');
+  assert.equal(early.status, 413);
+  assert.equal(early.headers.get('access-control-allow-origin'), 'http://localhost:8000');
+});
+
+test('maps body stream read errors to a CORS-bearing 400', async () => {
+  const stream = new ReadableStream({
+    start(controller) { controller.error(new Error('stream failed')); }
+  });
+  const input = new Request('https://project.supabase.co/functions/v1/send-contact', {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:8000', 'Content-Type': 'application/json' },
+    body: stream,
+    duplex: 'half'
+  });
+  const response = await createContactHandler(dependencies().deps)(input);
+  assert.equal(response.status, 400);
+  assert.equal((await body(response)).code, 'invalid_body');
+  assert.equal(response.headers.get('access-control-allow-origin'), 'http://localhost:8000');
+});
+
 test('returns unavailable for missing configuration without logging secret values', async () => {
   const { deps, calls } = dependencies({ values: { RESEND_API_KEY: '' } });
   const response = await createContactHandler(deps)(request());

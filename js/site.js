@@ -170,9 +170,12 @@
   var slideTimer = null;
   var badSrc = {};      // sources that failed to load, so we stop offering them
 
-  var contentApi = (window.NBContentApi && window.supabase)
+  var contentApi = window.NBContentApi
     ? window.NBContentApi.create(window.NB_SUPABASE_CONFIG || {}, window.supabase)
-    : { configured: false };
+    : {
+        configured: false,
+        sendContact: function () { return Promise.reject(new Error('Supabase is not configured.')); }
+      };
   var studioController = null;
   var studioReturnFocus = null;
 
@@ -662,14 +665,15 @@
     if (!row) { setStatus('This work could not be found.'); return Promise.resolve(false); }
     if (!window.confirm('Delete this work permanently? This cannot be undone.')) return Promise.resolve(false);
     setStatus('Deleting…');
-    var removeObject = row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve();
-    return removeObject.then(function () {
-      return contentApi.deleteArtwork(id);
-    }).then(function () {
+    return window.NBStudio.deleteFileBackedRecord(
+      function () { return contentApi.deleteArtwork(id); },
+      function () { return row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve(); }
+    ).then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
       state.lbId = null;
-      return loadRemoteContent();
-    }).then(function () {
-      setStatus('Work removed');
+      return loadRemoteContent().then(function () { return outcome; });
+    }).then(function (outcome) {
+      setStatus(outcome.cleanupError ? 'Work removed; its old file still needs cleanup.' : 'Work removed');
       return true;
     }).catch(function (error) {
       setStatus(error.message || 'The work could not be removed.');
@@ -911,11 +915,18 @@
     if (!window.confirm('Delete “' + label + '” permanently? This cannot be undone.')) return Promise.resolve(false);
     setManagerPending(form, true);
     managerStatus('Deleting…');
-    var removeObject = !isCv && row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve();
-    return removeObject.then(function () {
-      return isCv ? contentApi.deleteCv(id) : contentApi.deleteMedia(id);
-    }).then(function () {
-      return refreshAfterManagerWrite('Content deleted.', form);
+    var deletion = isCv
+      ? Promise.resolve(contentApi.deleteCv(id)).then(function () { return { ok: true }; })
+      : window.NBStudio.deleteFileBackedRecord(
+          function () { return contentApi.deleteMedia(id); },
+          function () { return row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve(); }
+        );
+    return deletion.then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      var message = outcome.cleanupError
+        ? 'Content deleted; its old file still needs cleanup.'
+        : 'Content deleted.';
+      return refreshAfterManagerWrite(message, form);
     }).catch(function (error) {
       managerStatus(error.message || 'The content could not be deleted.');
       setManagerPending(form, false);

@@ -243,3 +243,24 @@ test('invalid YouTube URLs are rejected before any database update', async funct
   assert.equal(got.ok, false);
   assert.equal(calls, 0);
 });
+
+test('deletes a database row before storage and keeps cleanup failure recoverable', async function () {
+  var order = [];
+  var rowError = new Error('row rejected');
+  var failed = await studio.deleteFileBackedRecord(
+    async function () { order.push('row'); throw rowError; },
+    async function () { order.push('object'); }
+  );
+  assert.equal(failed.ok, false);
+  assert.equal(failed.error, rowError);
+  assert.deepEqual(order, ['row']);
+
+  var cleanupError = new Error('object cleanup failed');
+  var retried = await studio.deleteFileBackedRecord(
+    async function () { order.push('row retry'); },
+    async function () { order.push('object retry'); throw cleanupError; }
+  );
+  assert.equal(retried.ok, true);
+  assert.equal(retried.cleanupError, cleanupError);
+  assert.deepEqual(order, ['row', 'row retry', 'object retry']);
+});
