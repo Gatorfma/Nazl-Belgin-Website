@@ -52,7 +52,7 @@ test('first click opens a closed disclosure after it receives focus', function (
     activeElement: disclosure,
     getElementById: function (id) {
       return {
-        'art-works': section,
+        'art-works-showcase': section,
         'art-works-viewport': viewport,
         'art-works-track': track
       }[id];
@@ -109,7 +109,7 @@ test('scrolling across Art Works switches the open top-level disclosure', functi
     activeElement: null,
     getElementById: function (id) {
       return {
-        'art-works': section,
+        'art-works-showcase': section,
         'art-works-viewport': viewport,
         'art-works-track': track
       }[id];
@@ -187,7 +187,7 @@ test('artist disclosures ignore hover and use a one-at-a-time click accordion', 
     activeElement: null,
     getElementById: function (id) {
       return {
-        'art-works': section,
+        'art-works-showcase': section,
         'art-works-viewport': viewport,
         'art-works-track': track
       }[id];
@@ -229,4 +229,64 @@ test('artist disclosures ignore hover and use a one-at-a-time click accordion', 
   artists[1].open = false;
   artists[1].fire('toggle');
   assert.deepEqual(artists.map(function (item) { return item.open; }), [false, false, false]);
+});
+
+test('content refresh wires new artist disclosures without duplicating existing handlers', function () {
+  function createDisclosure() {
+    var listeners = {};
+    return {
+      open: false,
+      addEventListener: function (type, listener) {
+        if (!listeners[type]) listeners[type] = [];
+        listeners[type].push(listener);
+      },
+      contains: function () { return false; },
+      fire: function (type) {
+        (listeners[type] || []).forEach(function (listener) { listener(); });
+      },
+      listenerCount: function (type) { return (listeners[type] || []).length; }
+    };
+  }
+
+  var documentListeners = {};
+  var artists = [createDisclosure()];
+  var style = { removeProperty: function () {} };
+  var section = {
+    style: style,
+    querySelectorAll: function (selector) {
+      return selector === '[data-artist-disclosure]' ? artists : [];
+    },
+    getBoundingClientRect: function () { return { top: 0 }; }
+  };
+  var document = {
+    activeElement: null,
+    addEventListener: function (type, listener) { documentListeners[type] = listener; },
+    getElementById: function (id) {
+      return {
+        'art-works-showcase': section,
+        'art-works-viewport': { clientWidth: 500 },
+        'art-works-track': { scrollWidth: 900, style: style }
+      }[id];
+    }
+  };
+  var window = {
+    innerHeight: 800,
+    innerWidth: 1024,
+    addEventListener: function () {},
+    matchMedia: function () { return { matches: false, addEventListener: function () {} }; },
+    requestAnimationFrame: function () { return 1; },
+    setTimeout: function (callback) { callback(); }
+  };
+
+  scroll.init(document, window);
+  var added = createDisclosure();
+  artists.push(added);
+  documentListeners['nb:content-updated']();
+
+  assert.equal(artists[0].listenerCount('toggle'), 1);
+  assert.equal(added.listenerCount('toggle'), 1);
+  artists[0].open = true;
+  added.open = true;
+  added.fire('toggle');
+  assert.deepEqual(artists.map(function (item) { return item.open; }), [false, true]);
 });

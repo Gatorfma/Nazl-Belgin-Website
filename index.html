@@ -13,20 +13,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Karla:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/site.css?v=20260913-1">
+<link rel="stylesheet" href="css/site.css?v=20260914-2">
 </head>
 <body>
 
-<a class="skip" href="#work">Skip to paintings</a>
+<a class="skip" href="#art-works">Skip to artworks</a>
 
 <nav class="nav">
   <a class="nav__mark" href="#top">Nazlı Belgin</a>
   <div class="nav__links">
     <a href="#work">Paintings</a>
-    <a href="#art-works">Art Works</a>
+    <a href="#youtube">Youtube</a>
+    <a href="#spotify">Spotify</a>
     <a href="#manifesto">Manifesto</a>
-    <a href="#films">Films</a>
-    <a href="#about">About</a>
+    <a href="#about">Biography</a>
     <a href="#contact">Contact</a>
   </div>
 </nav>
@@ -41,6 +41,7 @@
   </div>
 </header>
 
+<section class="artworks-collection" id="art-works" aria-label="Artworks">
 <section class="section" id="work">
   <div class="section__head">
     <div>
@@ -75,18 +76,15 @@
   <input type="file" id="nb-replace-file" accept="image/*" hidden>
 </section>
 
-<section class="artworks" id="art-works" aria-labelledby="art-works-title">
+<div class="artworks" id="art-works-showcase">
   <div class="artworks__sticky">
-    <div class="artworks__head">
-      <h2 class="h2" id="art-works-title">Art Works</h2>
-    </div>
     <div class="artworks__viewport" id="art-works-viewport">
       <div class="artworks__track" id="art-works-track">
-        <article class="artworks__panel artworks__panel--youtube">
+        <article class="artworks__panel artworks__panel--youtube" id="youtube" aria-labelledby="youtube-title">
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
-            <summary>Youtube</summary>
+            <summary><h2 id="youtube-title">Youtube</h2></summary>
             <div class="artworks__reveal">
-              <div class="artworks__media-slot" data-youtube-slot>
+              <div class="artworks__media-slot" id="youtube-slot" data-youtube-slot>
                 <iframe
                   src="https://www.youtube-nocookie.com/embed/VriyhA6ayys"
                   title="Nazlı Belgin video on YouTube"
@@ -100,10 +98,49 @@
           </details>
         </article>
 
-        <article class="artworks__panel artworks__panel--spotify">
+        <article class="artworks__panel artworks__panel--spotify" id="spotify" aria-labelledby="spotify-title">
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
-            <summary>Spotify</summary>
+            <summary><h2 id="spotify-title">Spotify</h2></summary>
             <div class="artworks__reveal artworks__reveal--spotify">
+              <div class="artworks__canvas">
+                <h3 class="h3 artworks__canvas-title">Canvas</h3>
+                <div class="films" id="films-grid">
+                  <article class="film" data-reveal="f0">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Dream%208.mp4"
+                        aria-label="Dream 8"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                  <article class="film" data-reveal="f1">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Single%202%20canvas.mp4"
+                        aria-label="Single 2 canvas"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                  <article class="film" data-reveal="f2">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Single%205%20canvas.mp4"
+                        aria-label="Single 5 canvas"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                </div>
+              </div>
+              <div id="spotify-galleries">
               <details class="artworks__artist" data-artist-disclosure>
                 <summary>Irmak Akıncı</summary>
                 <div class="artworks__artist-gallery artworks__artist-gallery--large" aria-label="Irmak Akıncı artworks">
@@ -134,12 +171,14 @@
                   <img src="art/hümeyra/image00008.png" alt="Spotify artwork for Hümeyra, 2" loading="lazy">
                 </div>
               </details>
+              </div>
             </div>
           </details>
         </article>
       </div>
     </div>
   </div>
+</div>
 </section>
 
 <section class="section manifesto" id="manifesto">
@@ -160,45 +199,6 @@
   </div>
 </section>
 
-<section class="section" id="films">
-  <h2 class="h2 h2--spaced">Films</h2>
-  <div class="films" id="films-grid">
-    <article class="film" data-reveal="f0">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Dream%208.mp4"
-          aria-label="Dream 8"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
-    <article class="film" data-reveal="f1">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Single%202%20canvas.mp4"
-          aria-label="Single 2 canvas"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
-    <article class="film" data-reveal="f2">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Single%205%20canvas.mp4"
-          aria-label="Single 5 canvas"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
-  </div>
-</section>
-
 <section class="section" id="about">
   <div class="about">
     <div class="about__opening">
@@ -207,7 +207,7 @@
         <p class="bio-beat bio-beat--lead">Nazlı Belgin was born in 1985 in Tekirdağ, Turkey, and has been interested in art since childhood.</p>
       </div>
       <figure class="about__portrait">
-        <div class="frame frame--portrait">
+        <div class="frame frame--portrait" id="portrait-frame">
           <img class="about__portrait-img" src="art/portrait/nazlı.jpg" alt="Portrait of Nazlı Belgin" width="1929" height="2411">
         </div>
       </figure>
@@ -224,7 +224,7 @@
   <div class="cv">
     <div>
       <h3 class="h3">Selected Exhibitions</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-exhibitions">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Stone Hills Zero — Espacio Gallery, London (solo)</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Gözlerimi Kapadım — H Art Project Galeri (group exhibition)</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">International Art &amp; Design Group Exhibition — Art Factor Gallery</span></div>
@@ -235,7 +235,7 @@
     </div>
     <div>
       <h3 class="h3">Art Projects</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-projects">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Hümeyra — Spotify Canvas illustrations</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Feridun Hürel — Spotify Canvas illustrations</span></div>
         <div class="cv__row"><span class="cv__year">2024</span><span class="cv__text">Pianist Irmak Akıncı — album cover and Spotify Canvas illustrations</span></div>
@@ -243,7 +243,7 @@
         <div class="cv__row"><span class="cv__year">2019</span><span class="cv__text">Nature Art Çalıştayı — Gaziantep</span></div>
       </div>
       <h3 class="h3 h3--gap">Art Fairs</h3>
-      <div class="cv__list">
+      <div class="cv__list" id="cv-fairs">
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Nouva Sanat Fuarı — 7 Art Galeri, Ankara</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">Art Concept Sanat Fuarı — Historia Art Studio, Adana</span></div>
         <div class="cv__row"><span class="cv__year">2025</span><span class="cv__text">IAAF — 3K Galeri, İzmir</span></div>
@@ -257,7 +257,7 @@
   <div class="contact">
     <div>
       <h2 class="h2 h2--tight">Contact</h2>
-      <p class="contact__line"><a class="contact__link" href="mailto:studio@nazlibelgin.com">studio@nazlibelgin.com</a></p>
+      <p class="contact__line"><a class="contact__link" href="mailto:nazlibelgin@gmail.com">nazlibelgin@gmail.com</a></p>
       <p class="contact__line contact__line--last"><a class="contact__link" href="https://instagram.com/nazlibelgin" rel="me noopener">@nazlibelgin</a></p>
       <p class="contact__note">Commissions are considered twice a year, in spring and late autumn. Tell me the room and the trouble it is having.</p>
       <p class="contact__note contact__note--tight">Studio visits in Kadıköy by appointment — Thursdays, generally.</p>
@@ -275,6 +275,10 @@
         <span class="field__label">Message</span>
         <textarea class="field__input" name="message" rows="4" required></textarea>
       </label>
+      <label class="form__trap" aria-hidden="true">
+        <span>Website</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
       <button class="btn btn--send" type="submit" id="send-btn">Send</button>
       <p class="form__status" id="form-status" role="status" aria-live="polite"></p>
     </form>
@@ -287,24 +291,69 @@
 
 </div>
 
-<div class="passgate" id="passgate" hidden>
+<div class="passgate" id="passgate" role="dialog" aria-modal="true" aria-labelledby="studio-login-title" hidden>
   <form class="passgate__form" id="pass-form">
-    <h3 class="passgate__title">Studio access</h3>
-    <p class="passgate__note">For Nazlı only. Enter the studio passcode to upload, edit and rearrange works.</p>
-    <input class="passgate__input" type="password" id="pass-input" placeholder="Passcode" autocomplete="current-password">
-    <p class="passgate__error" id="pass-error" hidden>That isn't it. Try again.</p>
+    <h3 class="passgate__title" id="studio-login-title">Studio access</h3>
+    <p class="passgate__note">For Nazlı only. Sign in with the invited Studio account.</p>
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input class="passgate__input" type="email" id="studio-email" autocomplete="username" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input class="passgate__input" type="password" id="studio-password" autocomplete="current-password" required>
+    </label>
+    <p class="passgate__error" id="pass-error" role="status" aria-live="polite"></p>
     <div class="passgate__actions">
-      <button class="btn btn--solid" type="submit">Enter</button>
+      <button class="btn btn--solid" type="submit" id="studio-submit">Sign in</button>
       <button class="btn btn--ghost" type="button" id="pass-cancel">Cancel</button>
     </div>
+    <button class="passgate__link" type="button" id="studio-forgot">Forgot password?</button>
   </form>
+</div>
+
+<div class="passgate" id="passwordgate" role="dialog" aria-modal="true" aria-labelledby="password-title" hidden>
+  <form class="passgate__form" id="password-form">
+    <h3 class="passgate__title" id="password-title">Change password</h3>
+    <p class="passgate__note">Request a verification code by email, then choose a new password.</p>
+    <button class="btn btn--ghost" type="button" id="password-send-code">Email verification code</button>
+    <label class="field">
+      <span class="field__label">Six-digit code</span>
+      <input class="passgate__input" type="text" id="password-nonce" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+    </label>
+    <label class="field">
+      <span class="field__label">New password</span>
+      <input class="passgate__input" type="password" id="password-new" autocomplete="new-password" minlength="12" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Confirm password</span>
+      <input class="passgate__input" type="password" id="password-confirm" autocomplete="new-password" minlength="12" required>
+    </label>
+    <p class="passgate__error" id="password-status" role="status" aria-live="polite"></p>
+    <div class="passgate__actions">
+      <button class="btn btn--solid" type="submit" id="password-submit">Change password</button>
+      <button class="btn btn--ghost" type="button" id="password-cancel">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<div class="manager" id="managergate" role="dialog" aria-modal="true" aria-labelledby="manager-title" aria-describedby="manager-status" hidden>
+  <div class="manager__shell">
+    <header class="manager__header">
+      <h2 id="manager-title">Manage content</h2>
+      <p id="manager-status" role="status" aria-live="polite"></p>
+      <button class="manager__close" type="button" id="manager-close">Close</button>
+    </header>
+    <div id="manager-body"></div>
+  </div>
 </div>
 
 <div class="studiobar" id="studiobar" hidden>
   <span class="studiobar__tag">Studio mode</span>
   <span class="studiobar__status" id="studio-status"></span>
   <button class="btn btn--bar" type="button" id="bar-upload">Upload</button>
-  <button class="btn btn--bar btn--bar-mute" type="button" id="bar-reset">Reset</button>
+  <button class="btn btn--bar" type="button" id="bar-manage">Manage content</button>
+  <button class="btn btn--bar btn--bar-mute" type="button" id="bar-password">Change password</button>
   <button class="btn btn--bar" type="button" id="bar-signout">Sign out</button>
 </div>
 
@@ -321,7 +370,14 @@
   </div>
 </div>
 
-<script src="js/art-works-scroll.js?v=20260913-1"></script>
-<script src="js/site.js?v=20260913-1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js?v=20260923-1"></script>
+<script src="js/content-model.js?v=20260923-1"></script>
+<script src="js/content-api.js?v=20260923-1"></script>
+<script src="js/contact.js?v=20260924-1"></script>
+<script src="js/content-render.js?v=20260923-1"></script>
+<script src="js/art-works-scroll.js?v=20260923-1"></script>
+<script src="js/studio.js?v=20260923-1"></script>
+<script src="js/site.js?v=20260923-1"></script>
 </body>
 </html>

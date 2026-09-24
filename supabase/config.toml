@@ -1,0 +1,4 @@
+project_id = "nazl-belgin-website"
+
+[functions.send-contact]
+verify_jwt = false

@@ -1,0 +1,240 @@
+(function (root, factory) {
+  'use strict';
+
+  var model = typeof module === 'object' && module.exports
+    ? require('./content-model.js')
+    : root.NBContentModel;
+  var api = factory(model);
+  if (typeof module === 'object' && module.exports) {
+    module.exports = api;
+    return;
+  }
+  root.NBContentRender = api;
+})(typeof window !== 'undefined' ? window : globalThis, function (model) {
+  'use strict';
+
+  var esc = model.escapeHtml;
+
+  function mergeLoadResult(fallback, result) {
+    return {
+      artworks: result.artworks && !result.artworks.error ? result.artworks.rows : fallback.artworks,
+      media: result.media && !result.media.error ? result.media.rows : fallback.media,
+      cv: result.cv && !result.cv.error ? result.cv.rows : fallback.cv
+    };
+  }
+
+  function cvHtml(entries) {
+    var html = { exhibition: '', project: '', fair: '' };
+    (entries || []).slice().sort(function (a, b) {
+      return Number(a.sort_order) - Number(b.sort_order);
+    }).forEach(function (entry) {
+      if (!Object.prototype.hasOwnProperty.call(html, entry.category)) return;
+      html[entry.category] += '<div class="cv__row" data-id="' + esc(entry.id || '') + '">' +
+        '<span class="cv__year">' + esc(entry.year) + '</span>' +
+        '<span class="cv__text">' + esc(entry.description) + '</span></div>';
+    });
+    return html;
+  }
+
+  function mediaHtml(grouped) {
+    grouped = grouped || { canvasVideos: [], spotifyGroups: [] };
+    var youtube = '';
+    var youtubeUrl = grouped.youtube ? model.normalizeYoutubeUrl(grouped.youtube.externalUrl) : null;
+    if (youtubeUrl) {
+      youtube = '<iframe src="' + esc(youtubeUrl) + '" title="' +
+        esc(grouped.youtube.title || 'Nazlı Belgin video on YouTube') + '" loading="lazy" ' +
+        'allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
+        'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+    }
+
+    var canvas = (grouped.canvasVideos || []).map(function (item, index) {
+      return '<article class="film is-in" data-id="' + esc(item.id) + '" data-reveal="remote-film-' + index + '">' +
+        '<div class="frame frame--film"><video class="film__video" src="' + esc(item.src) +
+        '" aria-label="' + esc(item.title || 'Canvas video') +
+        '" autoplay muted loop playsinline controls preload="metadata"></video></div></article>';
+    }).join('');
+
+    var spotify = (grouped.spotifyGroups || []).map(function (group, groupIndex) {
+      var galleryClass = 'artworks__artist-gallery' + (groupIndex === 0 ? ' artworks__artist-gallery--large' : '');
+      var images = group.items.map(function (item) {
+        return '<img src="' + esc(item.src) + '" alt="' + esc(item.altText || item.title || group.name) +
+          '" loading="lazy" data-id="' + esc(item.id) + '">';
+      }).join('');
+      return '<details class="artworks__artist" data-artist-disclosure data-group="' + esc(group.name) + '">' +
+        '<summary>' + esc(group.name) + '</summary><div class="' + galleryClass + '" aria-label="' +
+        esc(group.name + ' artworks') + '">' + images + '</div></details>';
+    }).join('');
+
+    return { youtube: youtube, canvas: canvas, spotify: spotify };
+  }
+
+  function renderMedia(root, grouped) {
+    var html = mediaHtml(grouped);
+    var changed = false;
+    var youtube = root.getElementById('youtube-slot');
+    var films = root.getElementById('films-grid');
+    var spotify = root.getElementById('spotify-galleries');
+    if (youtube) { youtube.innerHTML = html.youtube; changed = true; }
+    if (films) { films.innerHTML = html.canvas; changed = true; }
+    if (spotify) { spotify.innerHTML = html.spotify; changed = true; }
+    changed = renderPortrait(root, grouped && grouped.portrait) || changed;
+    return changed;
+  }
+
+  function renderPortrait(root, portrait) {
+    var frame = root.getElementById('portrait-frame');
+    if (!frame) return false;
+    if (!portrait || !portrait.src) {
+      frame.innerHTML = '';
+      return true;
+    }
+    var size = '';
+    if (portrait.ratio) {
+      var parts = portrait.ratio.split('/').map(function (value) { return value.trim(); });
+      if (parts.length === 2) size = ' width="' + esc(parts[0]) + '" height="' + esc(parts[1]) + '"';
+    }
+    frame.innerHTML = '<img class="about__portrait-img" src="' + esc(portrait.src) + '" alt="' +
+      esc(portrait.altText || 'Portrait of Nazlı Belgin') + '"' + size + '>';
+    return true;
+  }
+
+  function renderCv(root, entries) {
+    var html = cvHtml(entries);
+    var changed = false;
+    ['exhibition', 'project', 'fair'].forEach(function (category) {
+      var target = root.getElementById('cv-' + category + (category === 'fair' ? 's' : 's'));
+      if (!target) return;
+      target.innerHTML = html[category];
+      changed = true;
+    });
+    return changed;
+  }
+
+  function managerField(label, name, value, options) {
+    options = options || {};
+    var type = options.type || 'text';
+    var attrs = options.attrs ? ' ' + options.attrs : '';
+    var required = options.required === false ? '' : ' required';
+    return '<label class="manager__field"><span>' + esc(label) + '</span><input name="' +
+      esc(name) + '" type="' + esc(type) + '" value="' + esc(value || '') + '"' +
+      attrs + required + '></label>';
+  }
+
+  function managerActions(label, canMove) {
+    return '<div class="manager__actions">' +
+      (canMove ? '<button type="button" data-manager-action="up">Move up</button>' +
+        '<button type="button" data-manager-action="down">Move down</button>' : '') +
+      '<button type="submit">Save changes</button>' +
+      '<button type="button" data-manager-action="delete" class="manager__delete">Delete ' + esc(label) + '</button>' +
+      '</div>';
+  }
+
+  function mediaRow(item, kind, options) {
+    options = options || {};
+    var file = options.fileLabel ? managerField(options.fileLabel, 'file', '', {
+      type: 'file', attrs: 'accept="' + esc(options.accept) + '"', required: false
+    }) : '';
+    var group = options.group ? managerField('Artist or group', 'group_name', item.groupName) : '';
+    return '<form class="manager__row" data-id="' + esc(item.id) + '" data-kind="' + esc(kind) + '">' +
+      managerField('Title', 'title', item.title) + group +
+      managerField('Alternative text', 'alt_text', item.altText, { required: false }) + file +
+      managerActions(item.title || kind, options.canMove !== false) + '</form>';
+  }
+
+  function managerHtml(data, activeSection) {
+    data = data || {};
+    activeSection = activeSection || 'portrait';
+    var sections = [
+      ['portrait', 'Portrait'], ['canvas', 'Canvas'], ['youtube', 'YouTube'],
+      ['spotify', 'Spotify'], ['cv', 'CV']
+    ];
+    var nav = sections.map(function (section) {
+      var selected = section[0] === activeSection;
+      return '<button type="button" data-manager-section="' + section[0] +
+        '"' + (selected ? ' aria-current="page"' : '') + '>' +
+        section[1] + '</button>';
+    }).join('');
+    var body = '';
+
+    if (activeSection === 'portrait') {
+      body = '<h3>Portrait</h3><p class="manager__instruction">Replace the About portrait or update its accessible description.</p>' +
+        (data.portrait ? mediaRow(data.portrait, 'portrait', {
+          fileLabel: 'Replacement image', accept: 'image/jpeg,image/png,image/webp', canMove: false
+        }) : '<form class="manager__row manager__row--new" data-kind="portrait" data-new="true">' +
+          managerField('Title', 'title', 'Portrait') +
+          managerField('Alternative text', 'alt_text', 'Portrait of Nazlı Belgin', { required: false }) +
+          managerField('Image file', 'file', '', {
+            type: 'file', attrs: 'accept="image/jpeg,image/png,image/webp"'
+          }) + '<div class="manager__actions"><button type="submit">Add portrait</button></div></form>');
+    }
+
+    if (activeSection === 'canvas') {
+      body = '<h3>Canvas videos</h3><form class="manager__row manager__row--new" data-kind="canvas_video" data-new="true">' +
+        managerField('Title', 'title', '') +
+        managerField('Alternative text', 'alt_text', '', { required: false }) +
+        managerField('Video file', 'file', '', { type: 'file', attrs: 'accept="video/mp4,video/webm"' }) +
+        '<div class="manager__actions"><button type="submit">Add Canvas video</button></div></form>' +
+        (data.canvasVideos || []).map(function (item) {
+          return mediaRow(item, 'canvas_video', {
+            fileLabel: 'Replacement video', accept: 'video/mp4,video/webm'
+          });
+        }).join('');
+    }
+
+    if (activeSection === 'youtube') {
+      var youtube = data.youtube || {};
+      body = '<h3>YouTube</h3><p class="manager__instruction">Paste a YouTube watch, short, share or embed URL.</p>' +
+        '<form class="manager__row" data-id="' + esc(youtube.id || '') + '" data-kind="youtube">' +
+        managerField('Title', 'title', youtube.title || 'YouTube') +
+        managerField('YouTube URL', 'external_url', youtube.externalUrl || '', { type: 'url' }) +
+        '<div class="manager__actions"><button type="submit">Save YouTube video</button></div></form>';
+    }
+
+    if (activeSection === 'spotify') {
+      body = '<h3>Spotify artwork</h3><form class="manager__row manager__row--new" data-kind="spotify_image" data-new="true">' +
+        managerField('Artist or group', 'group_name', '') + managerField('Title', 'title', '') +
+        managerField('Alternative text', 'alt_text', '', { required: false }) +
+        managerField('Image file', 'file', '', { type: 'file', attrs: 'accept="image/jpeg,image/png,image/webp"' }) +
+        '<div class="manager__actions"><button type="submit">Add Spotify artwork</button></div></form>' +
+        (data.spotifyGroups || []).map(function (group) {
+          return '<section class="manager__group"><h4>' + esc(group.name) + '</h4>' + group.items.map(function (item) {
+            return mediaRow(item, 'spotify_image', {
+              group: true, fileLabel: 'Replacement image', accept: 'image/jpeg,image/png,image/webp'
+            });
+          }).join('') + '</section>';
+        }).join('');
+    }
+
+    if (activeSection === 'cv') {
+      var cv = data.cv || { exhibition: [], project: [], fair: [] };
+      var categoryNames = { exhibition: 'Selected Exhibitions', project: 'Projects', fair: 'Art Fairs' };
+      body = '<h3>CV</h3><form class="manager__row manager__row--new" data-kind="cv" data-new="true">' +
+        '<label class="manager__field"><span>Section</span><select name="category" required>' +
+        '<option value="exhibition">Selected Exhibitions</option><option value="project">Projects</option>' +
+        '<option value="fair">Art Fairs</option></select></label>' +
+        managerField('Year', 'year', '') + managerField('Description', 'description', '') +
+        '<div class="manager__actions"><button type="submit">Add CV entry</button></div></form>' +
+        ['exhibition', 'project', 'fair'].map(function (category) {
+          return '<section class="manager__group"><h4>' + categoryNames[category] + '</h4>' +
+            (cv[category] || []).map(function (entry) {
+              return '<form class="manager__row" data-id="' + esc(entry.id) + '" data-kind="cv" data-category="' + category + '">' +
+                managerField('Year', 'year', entry.year) + managerField('Description', 'description', entry.description) +
+                managerActions(entry.description || 'CV entry', true) + '</form>';
+            }).join('') + '</section>';
+        }).join('');
+    }
+
+    return '<div class="manager__layout"><nav class="manager__nav" aria-label="Content sections, including Selected Exhibitions">' +
+      nav + '</nav><div class="manager__content">' + body + '</div></div>';
+  }
+
+  return {
+    mergeLoadResult: mergeLoadResult,
+    cvHtml: cvHtml,
+    mediaHtml: mediaHtml,
+    renderMedia: renderMedia,
+    renderPortrait: renderPortrait,
+    renderCv: renderCv,
+    managerHtml: managerHtml
+  };
+});

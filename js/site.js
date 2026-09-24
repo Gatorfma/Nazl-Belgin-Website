@@ -3,26 +3,16 @@
  * Ported from the source design canvas (x-dc / DCLogic) to plain ES2018.
  * No build step, no dependencies.
  *
- * Studio mode lives entirely in this browser: works are persisted to
- * localStorage under STORE, the signed-in flag under AUTH. It is an
- * editing convenience for the artist on her own machine, not real
- * server-side auth — see README.
+ * Public content comes from Supabase when configured, with checked-in
+ * content as the startup/outage fallback. Studio access uses Supabase Auth.
  */
 (function () {
   'use strict';
 
   /* ---------- configuration ---------- */
 
-  var PASSCODE = 'atelier';          // studio passcode
-  var STORE    = 'nb-works-v1';      // localStorage key for the work list
-  var AUTH     = 'nb-studio-auth';   // localStorage key for the studio flag
   var SLIDE_MS = 5200;               // hero crossfade interval
   var MAX_EDGE = 1800;               // uploads are downscaled to this longest edge
-
-  // Set to a URL that accepts POST JSON to deliver the contact form
-  // server-side. While null, the form falls back to a prefilled mailto:.
-  var FORM_ENDPOINT = null;
-  var CONTACT_EMAIL = 'studio@nazlibelgin.com';
 
   /* ---------- source data ---------- */
 
@@ -32,7 +22,7 @@
   // Titles, dates, media and dimensions are recorded only where they are
   // actually known. Blank means unknown, never invented: these are real
   // paintings and a placeholder title would read as a real attribution.
-  var CATALOGUE = [
+  var FALLBACK_CATALOGUE = [
     // The three works whose titles and details are known.
     { src: 'art/sweet-devil.jpg', title: 'My Sweet Devil', year: 2025, series: 'Monsters', medium: 'Oil on canvas', dims: '60 × 60 cm', ratio: '1995 / 2000' },
     { src: 'art/darwin.jpg', title: 'Darwin Was Just Guessing', year: 2025, series: 'Evolution', medium: 'Oil on canvas', dims: '100 × 81 cm', ratio: '1667 / 2000' },
@@ -83,28 +73,10 @@
   var SERIES_ORDER = ['All', 'Monsters', 'Evolution', 'Stone Hills'];
 
   function buildWorks() {
-    return CATALOGUE.map(function (r, i) {
+    return FALLBACK_CATALOGUE.map(function (r, i) {
       return assign({}, r, { id: 'w' + i });
     });
   }
-
-  // Studio edits are saved to localStorage, and without a version marker that
-  // saved copy would shadow the shipped catalogue forever — publish new work
-  // and anyone who ever opened studio mode would keep seeing the old set.
-  // Stamping saves with a fingerprint of the catalogue makes an update to this
-  // file win: a stale copy is discarded rather than silently preferred.
-  function catalogueStamp() {
-    var s = CATALOGUE.length + '|' + CATALOGUE.map(function (r) {
-      return r.src;
-    }).join(',');
-    var h = 5381;
-    for (var i = 0; i < s.length; i++) {
-      h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-    }
-    return CATALOGUE.length + '-' + (h >>> 0).toString(36);
-  }
-
-  var STAMP = catalogueStamp();
 
   /* ---------- small helpers ---------- */
 
@@ -145,12 +117,7 @@
     return base ? base.charAt(0).toUpperCase() + base.slice(1) : 'Untitled';
   }
 
-  function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
-  function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
-  function lsDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
-
-  // Reads a File, downscales it to MAX_EDGE, and returns a data URL plus the
-  // image's true aspect ratio so the grid keeps each painting's proportions.
+  // Reads a File and returns an uploadable Blob plus its real dimensions.
   function readScaled(file, max) {
     return new Promise(function (resolve) {
       var fr = new FileReader();
@@ -159,12 +126,15 @@
         img.onload = function () {
           var w = img.naturalWidth, h = img.naturalHeight;
           var sc = Math.min(1, max / Math.max(w, h));
-          if (sc >= 1) { resolve({ url: fr.result, ratio: w + ' / ' + h }); return; }
+          if (sc >= 1) { resolve({ blob: file, width: w, height: h }); return; }
           var cw = Math.round(w * sc), ch = Math.round(h * sc);
           var c = document.createElement('canvas');
           c.width = cw; c.height = ch;
           c.getContext('2d').drawImage(img, 0, 0, cw, ch);
-          resolve({ url: c.toDataURL('image/jpeg', 0.88), ratio: w + ' / ' + h });
+          var mime = /^(image\/png|image\/webp|image\/jpeg)$/.test(file.type) ? file.type : 'image/jpeg';
+          c.toBlob(function (blob) {
+            resolve(blob ? { blob: blob, width: w, height: h } : null);
+          }, mime, 0.88);
         };
         img.onerror = function () { resolve(null); };
         img.src = fr.result;
@@ -178,11 +148,17 @@
 
   var state = {
     works: buildWorks(),
+    artworkRows: [],
+    media: [],
+    mediaRows: [],
+    cv: [],
     slide: 0,
     series: 'All',
     year: 'All',
     lbId: null,
     studio: false,
+    managerOpen: false,
+    managerSection: 'portrait',
     status: '',
     dragId: null,
     overId: null,
@@ -194,19 +170,82 @@
   var slideTimer = null;
   var badSrc = {};      // sources that failed to load, so we stop offering them
 
-  function save(works, note) {
-    state.works = works;
-    state.status = note || 'Saved';
-    if (!lsSet(STORE, JSON.stringify({ stamp: STAMP, works: works }))) {
-      state.status = 'Storage full — remove a work or use smaller files.';
-    }
-    render();
+  var contentApi = window.NBContentApi
+    ? window.NBContentApi.create(window.NB_SUPABASE_CONFIG || {}, window.supabase)
+    : {
+        configured: false,
+        sendContact: function () { return Promise.reject(new Error('Supabase is not configured.')); }
+      };
+  var studioController = null;
+  var studioReturnFocus = null;
+
+  function loadRemoteContent() {
+    if (!contentApi.configured) return Promise.resolve(false);
+    return contentApi.loadAll().then(function (result) {
+      if (!result.artworks.error) {
+        state.artworkRows = result.artworks.rows;
+        state.works = result.artworks.rows.map(function (row) {
+          return window.NBContentModel.normalizeArtwork(row, contentApi.publicUrl);
+        });
+      } else if (window.console) {
+        console.error('Artwork content could not be loaded.', result.artworks.error);
+      }
+
+      if (!result.media.error) {
+        state.mediaRows = result.media.rows;
+        state.media = result.media.rows.map(function (row) {
+          return window.NBContentModel.normalizeMedia(row, contentApi.publicUrl);
+        });
+        window.NBContentRender.renderMedia(document, window.NBContentModel.groupMedia(state.media));
+      } else if (window.console) {
+        console.error('Media content could not be loaded.', result.media.error);
+      }
+
+      if (!result.cv.error) {
+        state.cv = result.cv.rows;
+        window.NBContentRender.renderCv(document, state.cv);
+      } else if (window.console) {
+        console.error('CV content could not be loaded.', result.cv.error);
+      }
+
+      render();
+      document.dispatchEvent(new CustomEvent('nb:content-updated'));
+      return true;
+    }).catch(function (error) {
+      if (window.console) console.error('Remote content could not be loaded.', error);
+      return false;
+    });
   }
 
   function patch(id, fields, note) {
-    save(state.works.map(function (w) {
-      return w.id === id ? assign({}, w, fields) : w;
-    }), note);
+    if (!state.studio || !contentApi.configured) return Promise.resolve(false);
+    var dbFields = {};
+    Object.keys(fields).forEach(function (key) {
+      var dbKey = key === 'dims' ? 'dimensions' : key;
+      var value = fields[key];
+      if (key === 'year') value = String(value).trim() ? Number(value) : null;
+      dbFields[dbKey] = value === '' ? null : value;
+    });
+    setStatus('Saving…');
+    return contentApi.updateArtwork(id, dbFields).then(function (updated) {
+      var rowIndex = state.artworkRows.map(function (row) { return row.id; }).indexOf(id);
+      var workIndex = state.works.map(function (work) { return work.id; }).indexOf(id);
+      if (rowIndex >= 0) state.artworkRows[rowIndex] = updated;
+      if (workIndex >= 0) {
+        state.works[workIndex] = window.NBContentModel.normalizeArtwork(updated, contentApi.publicUrl);
+      }
+      renderFilters();
+      renderWorks();
+      renderHero();
+      renderStudio();
+      paintSlides();
+      document.dispatchEvent(new CustomEvent('nb:content-updated'));
+      setStatus(note || 'Saved');
+      return true;
+    }).catch(function (error) {
+      setStatus(error.message || 'Could not save this work.');
+      return false;
+    });
   }
 
   function canDrag() {
@@ -494,6 +533,26 @@
     document.body.style.paddingBottom = on ? '64px' : '';
   }
 
+  function groupedCv() {
+    var grouped = { exhibition: [], project: [], fair: [] };
+    state.cv.slice().sort(function (a, b) {
+      return Number(a.sort_order) - Number(b.sort_order);
+    }).forEach(function (entry) {
+      if (grouped[entry.category]) grouped[entry.category].push(entry);
+    });
+    return grouped;
+  }
+
+  function renderManager() {
+    var gate = $('managergate');
+    if (!gate) return;
+    gate.hidden = !state.managerOpen;
+    if (!state.managerOpen) return;
+    var grouped = window.NBContentModel.groupMedia(state.media);
+    grouped.cv = groupedCv();
+    $('manager-body').innerHTML = window.NBContentRender.managerHtml(grouped, state.managerSection);
+  }
+
   /* ---------- uploads ---------- */
 
   function setStatus(msg) {
@@ -501,9 +560,39 @@
     $('studio-status').textContent = msg;
   }
 
+  function artworkRow(id) {
+    for (var i = 0; i < state.artworkRows.length; i++) {
+      if (state.artworkRows[i].id === id) return state.artworkRows[i];
+    }
+    return null;
+  }
+
+  function uniqueId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    return '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0').slice(-12);
+  }
+
+  function replacementPath(id, mime) {
+    return window.NBContentModel.storagePath('artwork', id, mime)
+      .replace(/(\.[^.]+)$/, '-' + Date.now() + '$1');
+  }
+
   function ingest(files, targetId) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return Promise.resolve();
+
+    if (!state.studio || !contentApi.configured) {
+      setStatus('Sign in to Studio before uploading.');
+      return Promise.resolve();
+    }
+
+    var invalid = list.map(function (file) {
+      return window.NBContentModel.validateFile(file, 'artwork');
+    }).filter(function (check) { return !check.ok; })[0];
+    if (invalid) {
+      setStatus(invalid.message);
+      return Promise.resolve();
+    }
 
     setStatus('Processing ' + list.length + ' image' + (list.length > 1 ? 's' : '') + '…');
 
@@ -515,29 +604,370 @@
         });
       });
     }, Promise.resolve([])).then(function (done) {
-      if (!done.length) { setStatus('Nothing could be read.'); return; }
+      if (!done.length) { setStatus('Nothing could be read.'); return false; }
 
       if (targetId) {
-        patch(targetId, { src: done[0].r.url, ratio: done[0].r.ratio }, 'Image replaced');
-        renderLightbox();
-        return;
+        var oldRow = artworkRow(targetId);
+        if (!oldRow) { setStatus('This work could not be found.'); return false; }
+        setStatus('Uploading replacement…');
+        return window.NBStudio.replaceArtworkImageTransaction(contentApi, state.works, oldRow, {
+          blob: done[0].r.blob,
+          width: done[0].r.width,
+          height: done[0].r.height,
+          storagePath: replacementPath(targetId, done[0].r.blob.type)
+        }).then(function (outcome) {
+          if (!outcome.ok) throw outcome.error;
+          return loadRemoteContent();
+        }).then(function () {
+          setStatus('Image replaced');
+          renderLightbox();
+          return true;
+        }).catch(function (error) {
+          setStatus(error.message || 'The image could not be replaced.');
+          return false;
+        });
       }
 
-      var stamp = Date.now();
-      var added = done.map(function (d, n) {
-        return {
-          id: 'u' + stamp + '-' + n,
-          src: d.r.url,
-          ratio: d.r.ratio,
-          title: titleFromFile(d.file.name),
-          year: new Date().getFullYear(),
-          series: 'Monsters',
-          medium: 'Oil on canvas',
-          dims: ''
-        };
+      var added = 0;
+      return done.reduce(function (chain, item) {
+        return chain.then(function () {
+          var id = uniqueId();
+          return window.NBStudio.createArtworkTransaction(contentApi, state.works, {
+            id: id,
+            file: item.file,
+            blob: item.r.blob,
+            width: item.r.width,
+            height: item.r.height,
+            title: titleFromFile(item.file.name),
+            year: new Date().getFullYear(),
+            series: 'Monsters',
+            medium: 'Oil on canvas',
+            dimensions: '',
+            sortOrder: window.NBStudio.nextSortOrder(state.artworkRows)
+          }).then(function (outcome) {
+            if (!outcome.ok) throw outcome.error;
+            added += 1;
+            return loadRemoteContent();
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        setStatus(added + ' work' + (added === 1 ? '' : 's') + ' added — click one to edit it');
+        return true;
+      }).catch(function (error) {
+        setStatus((error && error.message) || 'An image could not be uploaded.');
+        return false;
       });
-      save(added.concat(state.works),
-        added.length + ' work' + (added.length > 1 ? 's' : '') + ' added — click one to name it');
+    });
+  }
+
+  function deleteArtwork(id) {
+    var row = artworkRow(id);
+    if (!row) { setStatus('This work could not be found.'); return Promise.resolve(false); }
+    if (!window.confirm('Delete this work permanently? This cannot be undone.')) return Promise.resolve(false);
+    setStatus('Deleting…');
+    return window.NBStudio.deleteFileBackedRecord(
+      function () { return contentApi.deleteArtwork(id); },
+      function () { return row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve(); }
+    ).then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      state.lbId = null;
+      return loadRemoteContent().then(function () { return outcome; });
+    }).then(function (outcome) {
+      setStatus(outcome.cleanupError ? 'Work removed; its old file still needs cleanup.' : 'Work removed');
+      return true;
+    }).catch(function (error) {
+      setStatus(error.message || 'The work could not be removed.');
+      return false;
+    });
+  }
+
+  function managerStatus(message) {
+    $('manager-status').textContent = message || '';
+  }
+
+  function managerMediaRow(id) {
+    for (var i = 0; i < state.mediaRows.length; i++) {
+      if (state.mediaRows[i].id === id) return state.mediaRows[i];
+    }
+    return null;
+  }
+
+  function setManagerPending(form, pending) {
+    Array.prototype.forEach.call(form.querySelectorAll('button, input, select'), function (control) {
+      control.disabled = pending;
+    });
+  }
+
+  function managerFormValue(form, name) {
+    return form.elements[name] ? form.elements[name].value.trim() : '';
+  }
+
+  function managerMediaFields(form, kind) {
+    return {
+      title: managerFormValue(form, 'title') || null,
+      alt_text: managerFormValue(form, 'alt_text') || null,
+      group_name: kind === 'spotify_image' ? managerFormValue(form, 'group_name') : null,
+      external_url: null,
+      published: true
+    };
+  }
+
+  function managerRowsFor(kind, groupName) {
+    return state.mediaRows.filter(function (row) {
+      return row.kind === kind && (row.group_name || '') === (groupName || '');
+    }).sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
+  }
+
+  function prepareManagerFile(file, kind) {
+    var check = window.NBContentModel.validateFile(file, kind);
+    if (!check.ok) return Promise.reject(new Error(check.message));
+    if (kind === 'canvas_video') {
+      return Promise.resolve({ blob: file, width: null, height: null });
+    }
+    return readScaled(file, MAX_EDGE).then(function (prepared) {
+      if (!prepared) throw new Error('The selected image could not be read.');
+      return prepared;
+    });
+  }
+
+  function managerStoragePath(kind, id, mimeType, replacement) {
+    var path = window.NBContentModel.storagePath(kind, id, mimeType);
+    return replacement ? path.replace(/(\.[^.]+)$/, '-' + Date.now() + '$1') : path;
+  }
+
+  function managerFormKey(form) {
+    return [
+      form.getAttribute('data-kind') || '',
+      form.getAttribute('data-id') || 'new',
+      form.getAttribute('data-category') || ''
+    ].join('|');
+  }
+
+  function captureManagerDrafts(excludedForm) {
+    var root = $('manager-body');
+    var snapshot = { values: {}, fileInputs: {}, focus: null };
+    if (!root) return snapshot;
+    Array.prototype.forEach.call(root.querySelectorAll('.manager__row'), function (form) {
+      var key = managerFormKey(form);
+      if (form !== excludedForm) {
+        snapshot.values[key] = {};
+        snapshot.fileInputs[key] = {};
+        Array.prototype.forEach.call(form.querySelectorAll('input[name], select[name], textarea[name]'), function (control) {
+          if (control.type === 'file') {
+            if (control.files && control.files.length) snapshot.fileInputs[key][control.name] = control;
+          } else {
+            snapshot.values[key][control.name] = control.value;
+          }
+        });
+      }
+      if (form.contains(document.activeElement)) {
+        var controls = Array.prototype.slice.call(form.querySelectorAll('input, select, textarea, button'));
+        snapshot.focus = { key: key, index: controls.indexOf(document.activeElement) };
+      }
+    });
+    return snapshot;
+  }
+
+  function restoreManagerDrafts(snapshot) {
+    if (!snapshot) return;
+    var forms = Array.prototype.slice.call($('manager-body').querySelectorAll('.manager__row'));
+    forms.forEach(function (form) {
+      var values = snapshot.values[managerFormKey(form)];
+      if (!values) return;
+      Object.keys(values).forEach(function (name) {
+        if (form.elements[name] && form.elements[name].type !== 'file') form.elements[name].value = values[name];
+      });
+      Object.keys(snapshot.fileInputs[managerFormKey(form)] || {}).forEach(function (name) {
+        var current = form.elements[name];
+        if (current && current.type === 'file') current.replaceWith(snapshot.fileInputs[managerFormKey(form)][name]);
+      });
+    });
+    if (!snapshot.focus) return;
+    var focusForm = forms.filter(function (form) { return managerFormKey(form) === snapshot.focus.key; })[0];
+    if (!focusForm) return;
+    var controls = focusForm.querySelectorAll('input, select, textarea, button');
+    if (controls[snapshot.focus.index]) controls[snapshot.focus.index].focus();
+  }
+
+  function refreshAfterManagerWrite(message, submittedForm) {
+    var drafts = captureManagerDrafts(submittedForm);
+    return loadRemoteContent().then(function (loaded) {
+      if (!loaded) throw new Error('The content was saved, but the page could not refresh.');
+      restoreManagerDrafts(drafts);
+      managerStatus(message);
+      return true;
+    });
+  }
+
+  function saveMediaManagerForm(form, kind, isNew) {
+    var fields = managerMediaFields(form, kind);
+    var fileInput = form.elements.file;
+    var file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    var id = isNew ? uniqueId() : form.getAttribute('data-id');
+    var row = isNew ? null : managerMediaRow(id);
+    if (!isNew && !row) return Promise.reject(new Error('This content record could not be found.'));
+    if (isNew && !file) return Promise.reject(new Error('Choose a file first.'));
+    if (!isNew && kind === 'spotify_image' && (row.group_name || '') !== (fields.group_name || '')) {
+      fields.sort_order = window.NBStudio.nextSortOrder(managerRowsFor(kind, fields.group_name));
+    }
+
+    if (!file) {
+      return contentApi.updateMedia(id, fields).then(function () {
+        return refreshAfterManagerWrite('Changes saved.', form);
+      });
+    }
+
+    return prepareManagerFile(file, kind).then(function (prepared) {
+      prepared.id = id;
+      prepared.storagePath = managerStoragePath(kind, id, prepared.blob.type, !isNew);
+      prepared.fields = fields;
+      if (isNew) {
+        prepared.fields.slug = kind.replace(/_/g, '-') + '-' + id;
+        prepared.fields.kind = kind;
+        prepared.fields.sort_order = window.NBStudio.nextSortOrder(managerRowsFor(kind, fields.group_name));
+        return window.NBStudio.createMediaFileTransaction(contentApi, state.mediaRows, prepared);
+      }
+      return window.NBStudio.replaceMediaFileTransaction(contentApi, state.mediaRows, row, prepared);
+    }).then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      return refreshAfterManagerWrite(isNew ? 'Content added.' : 'File and details replaced.', form);
+    });
+  }
+
+  function saveYouTubeManagerForm(form) {
+    var id = form.getAttribute('data-id');
+    var url = managerFormValue(form, 'external_url');
+    var title = managerFormValue(form, 'title') || 'YouTube';
+    if (id) {
+      return window.NBStudio.saveYouTube(contentApi, { id: id }, url, {
+        title: title, alt_text: null, group_name: null, published: true
+      }).then(function (outcome) {
+        if (!outcome.ok) throw outcome.error;
+        return refreshAfterManagerWrite('YouTube video saved.', form);
+      });
+    }
+    var normalized = window.NBContentModel.normalizeYoutubeUrl(url);
+    if (!normalized) return Promise.reject(new Error('Enter a valid YouTube URL.'));
+    id = uniqueId();
+    return contentApi.insertMedia({
+      id: id,
+      slug: 'youtube-' + id,
+      kind: 'youtube',
+      group_name: null,
+      title: title,
+      alt_text: null,
+      external_url: normalized,
+      storage_path: null,
+      legacy_path: null,
+      mime_type: null,
+      aspect_width: null,
+      aspect_height: null,
+      sort_order: 0,
+      published: true
+    }).then(function () { return refreshAfterManagerWrite('YouTube video saved.', form); });
+  }
+
+  function saveCvManagerForm(form, isNew) {
+    var category = isNew ? managerFormValue(form, 'category') : form.getAttribute('data-category');
+    var fields = {
+      category: category,
+      year: managerFormValue(form, 'year'),
+      description: managerFormValue(form, 'description'),
+      published: true
+    };
+    if (!fields.year || !fields.description) return Promise.reject(new Error('Enter both a year and description.'));
+    if (!isNew) {
+      return contentApi.updateCv(form.getAttribute('data-id'), fields)
+        .then(function () { return refreshAfterManagerWrite('CV entry saved.', form); });
+    }
+    var id = uniqueId();
+    fields.id = id;
+    fields.slug = 'cv-' + id;
+    fields.sort_order = window.NBStudio.nextSortOrder(groupedCv()[category]);
+    return contentApi.insertCv(fields).then(function () { return refreshAfterManagerWrite('CV entry added.', form); });
+  }
+
+  function saveManagerForm(form) {
+    var kind = form.getAttribute('data-kind');
+    var isNew = form.getAttribute('data-new') === 'true';
+    setManagerPending(form, true);
+    managerStatus('Saving…');
+    var operation;
+    if (kind === 'cv') operation = saveCvManagerForm(form, isNew);
+    else if (kind === 'youtube') operation = saveYouTubeManagerForm(form);
+    else operation = saveMediaManagerForm(form, kind, isNew);
+    return operation.catch(function (error) {
+      managerStatus(error.message || 'The content could not be saved.');
+      return false;
+    }).then(function (outcome) {
+      setManagerPending(form, false);
+      return outcome;
+    });
+  }
+
+  function deleteManagerRow(form) {
+    var kind = form.getAttribute('data-kind');
+    var id = form.getAttribute('data-id');
+    var isCv = kind === 'cv';
+    var row = isCv ? state.cv.filter(function (entry) { return entry.id === id; })[0] : managerMediaRow(id);
+    if (!row) { managerStatus('This content record could not be found.'); return Promise.resolve(false); }
+    var label = row.title || row.description || kind;
+    if (!window.confirm('Delete “' + label + '” permanently? This cannot be undone.')) return Promise.resolve(false);
+    setManagerPending(form, true);
+    managerStatus('Deleting…');
+    var deletion = isCv
+      ? Promise.resolve(contentApi.deleteCv(id)).then(function () { return { ok: true }; })
+      : window.NBStudio.deleteFileBackedRecord(
+          function () { return contentApi.deleteMedia(id); },
+          function () { return row.storage_path ? contentApi.remove([row.storage_path]) : Promise.resolve(); }
+        );
+    return deletion.then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      var message = outcome.cleanupError
+        ? 'Content deleted; its old file still needs cleanup.'
+        : 'Content deleted.';
+      return refreshAfterManagerWrite(message, form);
+    }).catch(function (error) {
+      managerStatus(error.message || 'The content could not be deleted.');
+      setManagerPending(form, false);
+      return false;
+    });
+  }
+
+  function moveManagerRow(form, direction) {
+    var kind = form.getAttribute('data-kind');
+    var id = form.getAttribute('data-id');
+    var rows;
+    var category = null;
+    var groupName = null;
+    var operation;
+    if (kind === 'cv') {
+      category = form.getAttribute('data-category');
+      rows = groupedCv()[category];
+    } else {
+      var row = managerMediaRow(id);
+      if (!row) { managerStatus('This content record could not be found.'); return Promise.resolve(false); }
+      groupName = row.group_name;
+      rows = managerRowsFor(kind, groupName);
+    }
+    var index = rows.map(function (item) { return item.id; }).indexOf(id);
+    var target = direction === 'up' ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= rows.length) return Promise.resolve(false);
+    var ids = rows.map(function (item) { return item.id; });
+    var moved = ids.splice(index, 1)[0];
+    ids.splice(target, 0, moved);
+    setManagerPending(form, true);
+    managerStatus('Saving order…');
+    operation = kind === 'cv'
+      ? window.NBStudio.persistCvOrder(contentApi, rows, category, ids)
+      : window.NBStudio.persistMediaOrder(contentApi, rows, kind, groupName, ids);
+    return operation.then(function (outcome) {
+      if (!outcome.ok) throw outcome.error;
+      return refreshAfterManagerWrite('Order saved.');
+    }).catch(function (error) {
+      managerStatus(error.message || 'The order could not be saved.');
+      setManagerPending(form, false);
+      return false;
     });
   }
 
@@ -549,6 +979,7 @@
     renderHero();
     renderStudio();
     renderLightbox();
+    renderManager();
     paintSlides();
   }
 
@@ -643,16 +1074,13 @@
     $('lb-delete').addEventListener('click', function () {
       var id = state.lbId;
       if (!id) return;
-      state.lbId = null;
-      save(state.works.filter(function (w) { return w.id !== id; }), 'Work removed');
+      deleteArtwork(id);
     });
 
     // studio access
     $('studio-toggle').addEventListener('click', function () {
       if (state.studio) {
-        state.studio = false;
-        state.status = '';
-        render();
+        studioController.signOut();
       } else {
         openGate();
       }
@@ -660,34 +1088,83 @@
 
     $('pass-form').addEventListener('submit', function (e) {
       e.preventDefault();
-      var val = $('pass-input').value.trim().toLowerCase();
-      if (val === String(PASSCODE).toLowerCase()) {
-        lsSet(AUTH, '1');
-        state.studio = true;
-        state.status = 'Signed in';
-        closeGate();
-        render();
-      } else {
-        $('pass-error').hidden = false;
-      }
+      var button = $('studio-submit');
+      button.disabled = true;
+      $('pass-error').textContent = 'Signing in…';
+      studioController.login($('studio-email').value.trim(), $('studio-password').value)
+        .then(function (outcome) {
+          $('pass-error').textContent = outcome.message;
+          if (outcome.ok) closeGate();
+        }).then(function () { button.disabled = false; });
     });
 
     $('pass-cancel').addEventListener('click', closeGate);
 
-    $('bar-signout').addEventListener('click', function () {
-      lsDel(AUTH);
-      state.studio = false;
-      state.lbId = null;
-      state.status = '';
-      render();
+    $('studio-forgot').addEventListener('click', function () {
+      var email = $('studio-email').value.trim();
+      $('pass-error').textContent = 'Requesting recovery email…';
+      studioController.requestRecovery(email, window.location.origin + window.location.pathname)
+        .then(function (outcome) { $('pass-error').textContent = outcome.message; });
     });
 
-    $('bar-reset').addEventListener('click', function () {
-      lsDel(STORE);
-      state.works = buildWorks();
-      state.status = 'Reset to the original set';
-      render();
+    $('bar-signout').addEventListener('click', function () {
+      studioController.signOut();
     });
+
+    $('bar-password').addEventListener('click', function () {
+      openPasswordGate();
+    });
+
+    $('bar-manage').addEventListener('click', openManager);
+    $('manager-close').addEventListener('click', closeManager);
+    $('manager-body').addEventListener('submit', function (e) {
+      var form = e.target.closest('.manager__row');
+      if (!form) return;
+      e.preventDefault();
+      saveManagerForm(form);
+    });
+    $('manager-body').addEventListener('click', function (e) {
+      var section = e.target.closest('[data-manager-section]');
+      if (section) {
+        state.managerSection = section.getAttribute('data-manager-section');
+        renderManager();
+        var selected = $('manager-body').querySelector('[data-manager-section="' + state.managerSection + '"]');
+        if (selected) selected.focus();
+        return;
+      }
+      var action = e.target.closest('[data-manager-action]');
+      if (!action) return;
+      var form = action.closest('.manager__row');
+      if (!form) return;
+      var name = action.getAttribute('data-manager-action');
+      if (name === 'delete') deleteManagerRow(form);
+      if (name === 'up' || name === 'down') moveManagerRow(form, name);
+    });
+
+    $('password-send-code').addEventListener('click', function () {
+      $('password-status').textContent = 'Sending verification code…';
+      studioController.requestPasswordChange().then(function (outcome) {
+        $('password-status').textContent = outcome.message;
+      });
+    });
+
+    $('password-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var button = $('password-submit');
+      button.disabled = true;
+      studioController.submitPasswordChange(
+        $('password-nonce').value.trim(), $('password-new').value, $('password-confirm').value
+      ).then(function (outcome) {
+        $('password-status').textContent = outcome.message;
+        if (outcome.ok) {
+          $('password-nonce').value = '';
+          $('password-new').value = '';
+          $('password-confirm').value = '';
+        }
+      }).then(function () { button.disabled = false; });
+    });
+
+    $('password-cancel').addEventListener('click', closePasswordGate);
 
     // uploads
     $('bar-upload').addEventListener('click', pickAdd);
@@ -706,6 +1183,8 @@
     window.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (!$('passgate').hidden) { closeGate(); return; }
+      if (!$('passwordgate').hidden) { closePasswordGate(); return; }
+      if (!$('managergate').hidden) { closeManager(); return; }
       if (state.lbId) closeLightbox();
     });
 
@@ -733,20 +1212,83 @@
     arr.splice(ti, 0, item);
     state.dragId = null;
     state.overId = null;
-    save(arr, 'Order saved');
+    setStatus('Saving order…');
+    window.NBStudio.persistOrder(contentApi, state.works, arr.map(function (work) {
+      return work.id;
+    })).then(function (outcome) {
+      if (!outcome.ok) {
+        setStatus(outcome.error.message || 'The order could not be saved.');
+        render();
+        return;
+      }
+      state.works = outcome.works;
+      state.status = 'Order saved';
+      render();
+    });
   }
 
   function openGate() {
-    $('pass-error').hidden = true;
-    $('pass-input').value = '';
+    studioReturnFocus = document.activeElement;
+    $('pass-error').textContent = contentApi.configured ? '' : 'Studio needs Supabase configuration before sign-in.';
+    $('studio-password').value = '';
     $('passgate').hidden = false;
-    $('pass-input').focus();
+    $('studio-email').focus();
   }
 
   function closeGate() {
     $('passgate').hidden = true;
-    $('pass-error').hidden = true;
-    $('pass-input').value = '';
+    $('pass-error').textContent = '';
+    $('studio-password').value = '';
+    if (studioReturnFocus && studioReturnFocus.focus) studioReturnFocus.focus();
+  }
+
+  function openPasswordGate() {
+    studioReturnFocus = document.activeElement;
+    $('password-status').textContent = '';
+    $('passwordgate').hidden = false;
+    $('password-send-code').focus();
+  }
+
+  function closePasswordGate() {
+    $('passwordgate').hidden = true;
+    $('password-status').textContent = '';
+    if (studioReturnFocus && studioReturnFocus.focus) studioReturnFocus.focus();
+  }
+
+  function openManager() {
+    if (!state.studio || !contentApi.configured) return;
+    state.managerOpen = true;
+    managerStatus('');
+    renderManager();
+    var selected = $('manager-body').querySelector('[data-manager-section][aria-current="page"]');
+    if (selected) selected.focus();
+  }
+
+  function closeManager() {
+    state.managerOpen = false;
+    $('managergate').hidden = true;
+    managerStatus('');
+    $('bar-manage').focus();
+  }
+
+  function setupStudioAuth() {
+    studioController = window.NBStudio.create({
+      auth: contentApi.configured ? contentApi.auth : null,
+      isStudioUser: contentApi.configured ? contentApi.isStudioUser : function () { return Promise.resolve(false); },
+      onStudioChange: function (on) {
+        state.studio = on;
+        if (!on) {
+          state.lbId = null;
+          state.managerOpen = false;
+          $('managergate').hidden = true;
+        }
+        state.status = on ? 'Signed in' : '';
+        render();
+      },
+      onRecovery: openPasswordGate,
+      onLoginRequest: openGate
+    });
+    return studioController.init();
   }
 
   /* ---------- contact form ---------- */
@@ -757,79 +1299,34 @@
     var status = $('form-status');
     var btn = $('send-btn');
 
-    var name = form.elements.name.value.trim();
-    var email = form.elements.email.value.trim();
-    var message = form.elements.message.value.trim();
-
-    if (!name || !email || !message) {
-      status.textContent = 'Name, email and a message, please.';
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      status.textContent = 'That email does not look right.';
-      return;
-    }
-
-    if (FORM_ENDPOINT) {
-      btn.disabled = true;
-      status.textContent = 'Sending…';
-      fetch(FORM_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, email: email, message: message })
-      }).then(function (res) {
-        if (!res.ok) throw new Error('bad status');
-        btn.textContent = 'Sent — thank you';
-        status.textContent = 'Received. A reply comes when the paint allows.';
-        form.reset();
-      }).catch(function () {
-        status.textContent = 'That did not send. Email ' + CONTACT_EMAIL + ' directly.';
-      }).then(function () {
-        btn.disabled = false;
-      });
-      return;
-    }
-
-    // No endpoint configured: hand the message to the visitor's mail client.
-    var subject = 'Studio enquiry — ' + name;
-    var body = message + '\n\n— ' + name + '\n' + email;
-    window.location.href = 'mailto:' + CONTACT_EMAIL +
-      '?subject=' + encodeURIComponent(subject) +
-      '&body=' + encodeURIComponent(body);
-
-    btn.textContent = 'Sent — thank you';
-    status.textContent = 'Your mail client should be opening. If nothing happens, write to ' + CONTACT_EMAIL + '.';
+    var fields = {
+      name: form.elements.name.value,
+      email: form.elements.email.value,
+      message: form.elements.message.value,
+      website: form.elements.website.value
+    };
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    status.textContent = 'Sending…';
+    window.NBContact.submit(contentApi.sendContact, fields).then(function (outcome) {
+      status.textContent = outcome.message;
+      btn.textContent = outcome.ok ? 'Sent — thank you' : 'Send';
+      if (outcome.ok) form.reset();
+      btn.disabled = false;
+    });
   }
 
   /* ---------- boot ---------- */
 
   function init() {
-    // Only reuse a saved list if it was saved against this exact catalogue.
-    // Anything older — including the pre-stamp bare-array format — is dropped,
-    // so editing this file always beats whatever a visitor's browser kept.
-    var raw = lsGet(STORE);
-    if (raw) {
-      var reused = false;
-      try {
-        var stored = JSON.parse(raw);
-        if (stored && stored.stamp === STAMP && stored.works && stored.works.length) {
-          state.works = stored.works;
-          reused = true;
-        }
-      } catch (err) {}
-      if (!reused) {
-        lsDel(STORE);
-        state.status = 'Local edits cleared — the published catalogue changed.';
-      }
-    }
-    state.studio = lsGet(AUTH) === '1';
-
     $('year').textContent = String(new Date().getFullYear());
 
     watch($('films-grid'));
     render();
     wire();
+    setupStudioAuth();
     startSlides();
+    loadRemoteContent();
   }
 
   if (document.readyState === 'loading') {

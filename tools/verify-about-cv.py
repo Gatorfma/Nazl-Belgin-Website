@@ -8,9 +8,12 @@ class AboutCvHeadings(HTMLParser):
         self.in_about = False
         self.in_h3 = False
         self.headings = []
+        self.element_ids = set()
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
+        if attributes.get("id"):
+            self.element_ids.add(attributes["id"])
         if tag == "section" and attributes.get("id") == "about":
             self.in_about = True
         if self.in_about and tag == "h3":
@@ -36,5 +39,10 @@ expected = ["Selected Exhibitions", "Art Projects", "Art Fairs"]
 
 if headings != expected:
     raise SystemExit(f"Expected About CV headings {expected}; found {headings}")
+
+required_ids = {"portrait-frame", "cv-exhibitions", "cv-projects", "cv-fairs"}
+missing_ids = sorted(required_ids - parser.element_ids)
+if missing_ids:
+    raise SystemExit(f"Expected managed Biography/CV containers; missing {missing_ids}")
 
 print("About CV order checks passed.")

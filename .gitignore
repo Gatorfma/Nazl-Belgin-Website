@@ -4,3 +4,6 @@ node_modules/
 *.log
 .vscode/
 .idea/
+.worktrees/
+supabase/.temp/
+supabase/functions/.env

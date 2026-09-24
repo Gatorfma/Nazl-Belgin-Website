@@ -27,16 +27,20 @@
     return boundedProgress === 0 ? 0 : -boundedProgress * maxShift;
   }
 
+  var activeController = null;
+
   function init(document, window) {
-    var section = document.getElementById('art-works');
+    var section = document.getElementById('art-works-showcase');
     var viewport = document.getElementById('art-works-viewport');
     var track = document.getElementById('art-works-track');
     if (!section || !viewport || !track) return;
 
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     var hoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)');
-    var scrollDisclosures = section.querySelectorAll('[data-scroll-disclosure]');
-    var artistDisclosures = section.querySelectorAll('[data-artist-disclosure]');
+    var scrollDisclosures = [];
+    var artistDisclosures = [];
+    var wiredHover = [];
+    var wiredArtists = [];
     var maxShift = 0;
     var scrollDistance = 0;
     var frame = 0;
@@ -86,9 +90,10 @@
       });
     }
 
-    Array.prototype.forEach.call(
-      section.querySelectorAll('[data-hover-disclosure]'),
-      function (disclosure) {
+    function wireHoverDisclosures() {
+      Array.prototype.forEach.call(section.querySelectorAll('[data-hover-disclosure]'), function (disclosure) {
+        if (wiredHover.indexOf(disclosure) !== -1) return;
+        wiredHover.push(disclosure);
         disclosure.addEventListener('mouseenter', function () {
           if (hoverPointer.matches) disclosure.open = true;
         });
@@ -100,14 +105,26 @@
         disclosure.addEventListener('focusout', function () {
           closeAfterFocusLeaves(disclosure);
         });
-      }
-    );
-
-    Array.prototype.forEach.call(artistDisclosures, function (disclosure) {
-      disclosure.addEventListener('toggle', function () {
-        if (disclosure.open) openArtistDisclosure(disclosure);
       });
-    });
+    }
+
+    function wireArtistDisclosures() {
+      Array.prototype.forEach.call(artistDisclosures, function (disclosure) {
+        if (wiredArtists.indexOf(disclosure) !== -1) return;
+        wiredArtists.push(disclosure);
+        disclosure.addEventListener('toggle', function () {
+          if (disclosure.open) openArtistDisclosure(disclosure);
+        });
+      });
+    }
+
+    function refresh() {
+      scrollDisclosures = section.querySelectorAll('[data-scroll-disclosure]');
+      artistDisclosures = section.querySelectorAll('[data-artist-disclosure]');
+      wireHoverDisclosures();
+      wireArtistDisclosures();
+      measure();
+    }
 
     window.addEventListener('scroll', requestPaint, { passive: true });
     window.addEventListener('resize', measure);
@@ -115,11 +132,17 @@
       reduceMotion.addEventListener('change', measure);
     }
     window.addEventListener('load', measure, { once: true });
-    measure();
+    if (typeof document.addEventListener === 'function') {
+      document.addEventListener('nb:content-updated', refresh);
+    }
+    activeController = { refresh: refresh };
+    refresh();
+    return activeController;
   }
 
   return {
     init: init,
+    refresh: function () { if (activeController) activeController.refresh(); },
     progressFromPosition: progressFromPosition,
     translationForProgress: translationForProgress
   };
