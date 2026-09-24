@@ -5,3 +5,5 @@ node_modules/
 .vscode/
 .idea/
 .worktrees/
+supabase/.temp/
+supabase/functions/.env
