@@ -15,7 +15,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  current_time timestamptz := clock_timestamp();
+  checked_at timestamptz := clock_timestamp();
   allowed boolean;
 begin
   if client_hash !~ '^[0-9a-f]{64}$' then
@@ -24,18 +24,18 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(client_hash, 0));
   delete from public.contact_rate_limits
-  where window_started_at < current_time - interval '1 day';
+  where window_started_at < checked_at - interval '1 day';
 
   insert into public.contact_rate_limits as limits
     (client_hash, window_started_at, attempt_count)
-  values (client_hash, current_time, 1)
+  values (client_hash, checked_at, 1)
   on conflict (client_hash) do update set
     window_started_at = case
-      when limits.window_started_at <= current_time - interval '10 minutes' then current_time
+      when limits.window_started_at <= checked_at - interval '10 minutes' then checked_at
       else limits.window_started_at
     end,
     attempt_count = case
-      when limits.window_started_at <= current_time - interval '10 minutes' then 1
+      when limits.window_started_at <= checked_at - interval '10 minutes' then 1
       else limits.attempt_count + 1
     end
   returning attempt_count <= 5 into allowed;

@@ -11,6 +11,8 @@ foreach ($fragment in @(
   'enable row level security',
   'create or replace function public.consume_contact_rate_limit',
   'pg_advisory_xact_lock',
+  'checked_at timestamptz := clock_timestamp()',
+  "window_started_at < checked_at - interval '1 day'",
   "interval '10 minutes'",
   'attempt_count + 1',
   'revoke all on table public.contact_rate_limits from anon, authenticated',
