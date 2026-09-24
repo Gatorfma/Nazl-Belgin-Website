@@ -6,9 +6,13 @@ class PortfolioStructure(HTMLParser):
     def __init__(self):
         super().__init__()
         self.section_ids = []
-        self.current_section = None
+        self.top_level_section_ids = []
+        self.section_stack = []
+        self.art_works_attributes = None
         self.in_heading = False
         self.headings = []
+        self.heading_ids = []
+        self.heading_tags = []
         self.details_depth = 0
         self.summary_depth = 0
         self.summaries = []
@@ -21,22 +25,37 @@ class PortfolioStructure(HTMLParser):
         self.artist_gallery_classes = []
         self.artist_disclosures = 0
         self.hover_artist_disclosures = 0
+        self.media_articles = []
+        self.element_ids = set()
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
+        if attributes.get('id'):
+            self.element_ids.add(attributes['id'])
         if tag == 'nav':
             self.in_nav = True
         if self.in_nav and tag == 'a':
             self.current_nav_link = {'href': attributes.get('href'), 'text': ''}
             self.nav_links.append(self.current_nav_link)
         if tag == 'section':
-            self.current_section = attributes.get('id')
-            if self.current_section:
-                self.section_ids.append(self.current_section)
-        if self.current_section == 'art-works':
-            if tag in {'h2', 'h3'}:
+            section_id = attributes.get('id')
+            if section_id == 'art-works':
+                self.art_works_attributes = attributes
+            if not self.section_stack and section_id:
+                self.top_level_section_ids.append(section_id)
+            self.section_stack.append(section_id)
+            if section_id:
+                self.section_ids.append(section_id)
+        if 'art-works' in self.section_stack:
+            if tag in {'h2', 'h3', 'h4'}:
                 self.in_heading = True
                 self.headings.append('')
+                self.heading_ids.append(attributes.get('id'))
+                self.heading_tags.append(tag)
+            if tag == 'article' and 'artworks__panel' in attributes.get('class', '').split():
+                self.media_articles.append(
+                    (attributes.get('id'), attributes.get('aria-labelledby'))
+                )
             if tag == 'details':
                 self.details_depth += 1
                 if 'data-scroll-disclosure' in attributes:
@@ -56,15 +75,15 @@ class PortfolioStructure(HTMLParser):
                 self.artist_gallery_classes.append(attributes.get('class', '').split())
 
     def handle_endtag(self, tag):
-        if self.current_section == 'art-works':
-            if tag in {'h2', 'h3'}:
+        if 'art-works' in self.section_stack:
+            if tag in {'h2', 'h3', 'h4'}:
                 self.in_heading = False
             if tag == 'summary':
                 self.summary_depth -= 1
             if tag == 'details':
                 self.details_depth -= 1
         if tag == 'section':
-            self.current_section = None
+            self.section_stack.pop()
         if tag == 'a':
             self.current_nav_link = None
         if tag == 'nav':
@@ -73,7 +92,7 @@ class PortfolioStructure(HTMLParser):
     def handle_data(self, data):
         if self.current_nav_link is not None:
             self.current_nav_link['text'] += data
-        if self.current_section != 'art-works':
+        if 'art-works' not in self.section_stack:
             return
         if self.in_heading:
             self.headings[-1] += data
@@ -84,15 +103,52 @@ class PortfolioStructure(HTMLParser):
 root = Path(__file__).resolve().parents[1]
 parser = PortfolioStructure()
 parser.feed((root / 'index.html').read_text(encoding='utf-8'))
+site_css = (root / 'css' / 'site.css').read_text(encoding='utf-8')
 
-expected_order = ['work', 'art-works', 'manifesto']
-actual_order = [section for section in parser.section_ids if section in expected_order]
-if actual_order != expected_order:
-    raise SystemExit(f'Expected section order {expected_order}; found {actual_order}')
+expected_top_level_order = ['art-works', 'manifesto', 'about', 'contact']
+if parser.top_level_section_ids != expected_top_level_order:
+    raise SystemExit(
+        f'Expected top-level section order {expected_top_level_order}; '
+        f'found {parser.top_level_section_ids}'
+    )
+
+if 'work' not in parser.section_ids:
+    raise SystemExit('Expected Paintings inside the Artworks section.')
+
+if parser.art_works_attributes is None:
+    raise SystemExit('Expected the Artworks umbrella section to remain available.')
+if parser.art_works_attributes.get('aria-label') != 'Artworks':
+    raise SystemExit('Expected the hidden Artworks umbrella to keep an accessible label.')
+if parser.art_works_attributes.get('aria-labelledby'):
+    raise SystemExit('Expected Artworks not to reference a removed visible heading.')
 
 headings = [' '.join(value.split()) for value in parser.headings]
-if headings != ['Art Works']:
-    raise SystemExit(f'Expected the Art Works heading; found {headings}')
+heading_outline = list(zip(parser.heading_tags, headings))
+expected_heading_outline = [
+    ('h2', 'Paintings'),
+    ('h2', 'Youtube'),
+    ('h2', 'Spotify'),
+    ('h3', 'Canvas'),
+]
+if heading_outline != expected_heading_outline:
+    raise SystemExit(
+        'Expected Paintings to replace the visible Artworks heading, followed by '
+        'Youtube, Spotify, and Canvas in a semantic heading hierarchy; '
+        f'found {heading_outline}'
+    )
+
+expected_media_articles = [
+    ('youtube', 'youtube-title'),
+    ('spotify', 'spotify-title'),
+]
+if parser.media_articles != expected_media_articles:
+    raise SystemExit(
+        f'Expected labelled Youtube and Spotify articles; found {parser.media_articles}'
+    )
+if not {'youtube-title', 'spotify-title'}.issubset(set(parser.heading_ids)):
+    raise SystemExit('Expected the media article labels to reference real headings.')
+if '.artworks__disclosure > summary h2 {' not in site_css:
+    raise SystemExit('Expected the promoted media h2 headings to inherit summary typography.')
 
 summaries = [' '.join(value.split()) for value in parser.summaries]
 expected_summaries = ['Youtube', 'Spotify', 'Irmak Akıncı', 'Feridun Hürel', 'Hümeyra']
@@ -123,9 +179,20 @@ if 'autoplay' in youtube_iframe.get('allow', '').lower():
 nav_links = [
     (link['href'], ' '.join(link['text'].split()))
     for link in parser.nav_links
+    if link['href'] != '#top'
 ]
-if ('#art-works', 'Art Works') not in nav_links:
-    raise SystemExit('Expected an Art Works link in the primary navigation.')
+expected_nav_links = [
+    ('#work', 'Paintings'),
+    ('#youtube', 'Youtube'),
+    ('#spotify', 'Spotify'),
+    ('#manifesto', 'Manifesto'),
+    ('#about', 'Biography'),
+    ('#contact', 'Contact'),
+]
+if nav_links != expected_nav_links:
+    raise SystemExit(
+        f'Expected navigation order {expected_nav_links}; found {nav_links}'
+    )
 
 if parser.scroll_disclosures != 2:
     raise SystemExit(
@@ -174,5 +241,10 @@ if parser.hover_artist_disclosures:
         'Expected artist disclosures to open only by click; '
         f'found {parser.hover_artist_disclosures} with hover enabled'
     )
+
+required_managed_ids = {'youtube-slot', 'films-grid', 'spotify-galleries'}
+missing_managed_ids = sorted(required_managed_ids - parser.element_ids)
+if missing_managed_ids:
+    raise SystemExit(f'Expected managed Art Works containers; missing {missing_managed_ids}')
 
 print('Art Works structure checks passed.')

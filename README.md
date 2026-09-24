@@ -9,7 +9,7 @@ static server and it runs.
 ## Layout
 
 ```
-index.html        markup: nav, hero, work, manifesto, films, about, contact, overlays
+index.html        markup: nav, hero, artworks, manifesto, biography, contact, overlays
 css/site.css      all styling; design tokens as CSS custom properties on :root
 js/site.js        behaviour, ported from the design's x-dc / DCLogic component
 favicon.svg
@@ -46,7 +46,7 @@ that runtime works outside the design canvas, so the port:
   `background-image` divs, so artwork is crawlable and lazily fetched;
 - adds `lang`, `<title>`, meta description, Open Graph tags, a favicon, a skip
   link, focus-visible outlines, and `prefers-reduced-motion` handling;
-- renders the manifesto, films, biography and CV lists as static HTML rather
+- renders the manifesto, Canvas videos, biography and CV lists as static HTML rather
   than from JS, so they survive with JavaScript disabled. Only the work
   archive needs JS, since it is filterable and editable.
 

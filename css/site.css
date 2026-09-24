@@ -183,7 +183,7 @@ img { max-width: 100%; display: block; }
 .section { padding: clamp(64px, 12vh, 140px) var(--pad-x) clamp(48px, 8vh, 96px); }
 .section--contact { padding-bottom: clamp(80px, 14vh, 160px); }
 .manifesto { padding: clamp(80px, 16vh, 200px) var(--pad-x); }
-#films, #about { padding-bottom: clamp(48px, 8vh, 96px); }
+#about { padding-bottom: clamp(48px, 8vh, 96px); }
 
 .section__head {
   display: flex;
@@ -452,6 +452,11 @@ img { max-width: 100%; display: block; }
   letter-spacing: -0.015em;
 }
 
+.artworks__disclosure > summary h2 {
+  margin: 0;
+  font: inherit;
+}
+
 .artworks__disclosure > summary::after,
 .artworks__artist > summary::after {
   content: '+';
@@ -497,6 +502,30 @@ img { max-width: 100%; display: block; }
 .artworks__reveal--spotify {
   display: flex;
   flex-direction: column;
+}
+
+@media (min-width: 721px) {
+  .artworks__panel--spotify .artworks__reveal {
+    max-height: calc(100svh - clamp(80px, 14vh, 160px) - clamp(64px, 8vw, 108px));
+    overflow-y: auto;
+    padding-right: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-in) transparent;
+  }
+}
+
+.artworks__canvas {
+  padding: 0 0 clamp(24px, 4vh, 40px);
+  border-bottom: 1px solid var(--line);
+}
+
+.artworks__canvas-title {
+  margin-bottom: 24px;
+}
+
+.artworks__canvas .films {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 24px);
 }
 
 .artworks__artist {
@@ -656,7 +685,7 @@ img { max-width: 100%; display: block; }
   line-height: 1.14;
 }
 
-/* ---------- films ---------- */
+/* ---------- canvas videos ---------- */
 
 .films {
   display: grid;
@@ -784,6 +813,19 @@ img { max-width: 100%; display: block; }
 }
 
 @media (max-width: 720px) {
+  .nav {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .nav__mark { flex: 0 0 auto; }
+  .nav__links {
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
   .artworks { height: auto !important; }
   .artworks__sticky {
     position: relative;
@@ -820,6 +862,7 @@ img { max-width: 100%; display: block; }
   .artworks__artist-gallery--large img {
     height: auto;
   }
+  .artworks__canvas .films { grid-template-columns: 1fr; }
 
   .manifesto__body { gap: 44px; }
   .manifesto__beat--right,

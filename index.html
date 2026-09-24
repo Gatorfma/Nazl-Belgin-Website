@@ -13,20 +13,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Karla:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/site.css?v=20260913-1">
+<link rel="stylesheet" href="css/site.css?v=20260914-2">
 </head>
 <body>
 
-<a class="skip" href="#work">Skip to paintings</a>
+<a class="skip" href="#art-works">Skip to artworks</a>
 
 <nav class="nav">
   <a class="nav__mark" href="#top">Nazlı Belgin</a>
   <div class="nav__links">
     <a href="#work">Paintings</a>
-    <a href="#art-works">Art Works</a>
+    <a href="#youtube">Youtube</a>
+    <a href="#spotify">Spotify</a>
     <a href="#manifesto">Manifesto</a>
-    <a href="#films">Films</a>
-    <a href="#about">About</a>
+    <a href="#about">Biography</a>
     <a href="#contact">Contact</a>
   </div>
 </nav>
@@ -41,6 +41,7 @@
   </div>
 </header>
 
+<section class="artworks-collection" id="art-works" aria-label="Artworks">
 <section class="section" id="work">
   <div class="section__head">
     <div>
@@ -75,16 +76,13 @@
   <input type="file" id="nb-replace-file" accept="image/*" hidden>
 </section>
 
-<section class="artworks" id="art-works" aria-labelledby="art-works-title">
+<div class="artworks" id="art-works-showcase">
   <div class="artworks__sticky">
-    <div class="artworks__head">
-      <h2 class="h2" id="art-works-title">Art Works</h2>
-    </div>
     <div class="artworks__viewport" id="art-works-viewport">
       <div class="artworks__track" id="art-works-track">
-        <article class="artworks__panel artworks__panel--youtube">
+        <article class="artworks__panel artworks__panel--youtube" id="youtube" aria-labelledby="youtube-title">
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
-            <summary>Youtube</summary>
+            <summary><h2 id="youtube-title">Youtube</h2></summary>
             <div class="artworks__reveal">
               <div class="artworks__media-slot" id="youtube-slot" data-youtube-slot>
                 <iframe
@@ -100,10 +98,48 @@
           </details>
         </article>
 
-        <article class="artworks__panel artworks__panel--spotify">
+        <article class="artworks__panel artworks__panel--spotify" id="spotify" aria-labelledby="spotify-title">
           <details class="artworks__disclosure" data-hover-disclosure data-scroll-disclosure>
-            <summary>Spotify</summary>
+            <summary><h2 id="spotify-title">Spotify</h2></summary>
             <div class="artworks__reveal artworks__reveal--spotify">
+              <div class="artworks__canvas">
+                <h3 class="h3 artworks__canvas-title">Canvas</h3>
+                <div class="films" id="films-grid">
+                  <article class="film" data-reveal="f0">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Dream%208.mp4"
+                        aria-label="Dream 8"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                  <article class="film" data-reveal="f1">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Single%202%20canvas.mp4"
+                        aria-label="Single 2 canvas"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                  <article class="film" data-reveal="f2">
+                    <div class="frame frame--film">
+                      <video
+                        class="film__video"
+                        src="art/films/Single%205%20canvas.mp4"
+                        aria-label="Single 5 canvas"
+                        autoplay muted loop playsinline controls
+                        preload="metadata"
+                      ></video>
+                    </div>
+                  </article>
+                </div>
+              </div>
               <div id="spotify-galleries">
               <details class="artworks__artist" data-artist-disclosure>
                 <summary>Irmak Akıncı</summary>
@@ -142,6 +178,7 @@
       </div>
     </div>
   </div>
+</div>
 </section>
 
 <section class="section manifesto" id="manifesto">
@@ -159,45 +196,6 @@
     <p class="manifesto__beat manifesto__beat--resistance manifesto__beat--right">In my art, form is not evolution — it is resistance.<br>I belong nowhere.</p>
     <p class="manifesto__beat manifesto__beat--stone">I paint the inner eruption that has burned since the Stone Age.<br>As I look at the walls of the past, I tear down the walls of the present.</p>
     <p class="manifesto__beat manifesto__beat--close manifesto__beat--right">For me, art is not rebirth — it is renewed attack.</p>
-  </div>
-</section>
-
-<section class="section" id="films">
-  <h2 class="h2 h2--spaced">Films</h2>
-  <div class="films" id="films-grid">
-    <article class="film" data-reveal="f0">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Dream%208.mp4"
-          aria-label="Dream 8"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
-    <article class="film" data-reveal="f1">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Single%202%20canvas.mp4"
-          aria-label="Single 2 canvas"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
-    <article class="film" data-reveal="f2">
-      <div class="frame frame--film">
-        <video
-          class="film__video"
-          src="art/films/Single%205%20canvas.mp4"
-          aria-label="Single 5 canvas"
-          autoplay muted loop playsinline controls
-          preload="metadata"
-        ></video>
-      </div>
-    </article>
   </div>
 </section>
 
