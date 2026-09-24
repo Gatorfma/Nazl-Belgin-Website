@@ -41,6 +41,9 @@ for forbidden in ("window.location", "mailto:", "FORM_ENDPOINT"):
         raise SystemExit(f"Contact submit still contains forbidden mail-app behavior: {forbidden}")
 if html.count('href="mailto:nazlibelgin@gmail.com"') != 1:
     raise SystemExit("The one visible direct-email link must remain")
+if html.count('href="https://instagram.com/art.nazlibelgin"') != 1 \
+        or html.count('>@art.nazlibelgin</a>') != 1:
+    raise SystemExit("The visible Instagram link must target and display @art.nazlibelgin")
 
 parser = ContactParser()
 parser.feed(html)
