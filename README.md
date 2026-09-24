@@ -129,12 +129,49 @@ that fails to load is remembered for the session so it is not retried.
 
 ## Contact form
 
-With no backend, the form validates input and then hands the message to the
-visitor's mail client via a prefilled `mailto:` to `nazlibelgin@gmail.com`.
+The public form calls the unauthenticated `send-contact` Supabase Edge Function,
+which validates and rate-limits the message before asking Resend to deliver it.
+Submitting the form never opens a local mail application. The visible email link
+remains available as a manual fallback.
 
-To deliver it server-side instead, set `FORM_ENDPOINT` in `js/site.js` to a URL
-that accepts `POST` JSON of `{name, email, message}`. The mailto path is then
-skipped and failures fall back to showing the studio address.
+### Contact email deployment
+
+1. Add and verify `nazlibelgin.com` in Resend, then wait until its SPF and DKIM
+   checks both succeed.
+2. Copy `supabase/functions/.env.example` to the ignored
+   `supabase/functions/.env`. Fill in the Resend key and a long random
+   `CONTACT_IP_SALT`; keep the development recipient unchanged for now.
+3. In the linked project's SQL Editor, run `supabase/05_contact_delivery.sql`,
+   then `supabase/06_verify_contact_delivery.sql`.
+4. Upload the local values as hosted function secrets:
+
+   ```powershell
+   supabase secrets set --env-file supabase/functions/.env
+   ```
+
+5. Deploy the public function:
+
+   ```powershell
+   supabase functions deploy send-contact --no-verify-jwt --use-api
+   ```
+
+6. Run the non-delivery probes first, then send one real verification message:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tools/verify-contact-live.ps1 `
+     -ProjectUrl "https://YOUR_PROJECT.supabase.co" -PublishableKey "YOUR_PUBLISHABLE_KEY"
+   powershell -ExecutionPolicy Bypass -File tools/verify-contact-live.ps1 `
+     -ProjectUrl "https://YOUR_PROJECT.supabase.co" -PublishableKey "YOUR_PUBLISHABLE_KEY" -Send
+   ```
+
+7. From `http://localhost:8000`, submit the real form. Confirm the Resend event
+   is delivered and the message reaches `furkanmertaksakal@gmail.com`.
+8. At launch, change only `CONTACT_TO_EMAIL` in the local env file to
+   `nazlibelgin@gmail.com`, upload secrets again, and rerun the live send.
+
+This workspace reported Supabase CLI 2.34.3 while the CLI advertised 2.117.0.
+If Edge Function bundling fails, update the CLI before changing function code.
+Never commit `supabase/functions/.env`, a Resend key, or the IP salt.
 
 ## Notes
 
