@@ -888,6 +888,14 @@ img { max-width: 100%; display: block; }
   max-width: 460px;
 }
 
+.form__trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field__label {
   font-size: 10px;

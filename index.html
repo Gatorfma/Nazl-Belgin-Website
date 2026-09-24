@@ -275,6 +275,10 @@
         <span class="field__label">Message</span>
         <textarea class="field__input" name="message" rows="4" required></textarea>
       </label>
+      <label class="form__trap" aria-hidden="true">
+        <span>Website</span>
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </label>
       <button class="btn btn--send" type="submit" id="send-btn">Send</button>
       <p class="form__status" id="form-status" role="status" aria-live="polite"></p>
     </form>
@@ -321,7 +325,14 @@
   </div>
 </div>
 
-<script src="js/art-works-scroll.js?v=20260913-1"></script>
-<script src="js/site.js?v=20260913-1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js?v=20260923-1"></script>
+<script src="js/content-model.js?v=20260923-1"></script>
+<script src="js/content-api.js?v=20260923-1"></script>
+<script src="js/contact.js?v=20260924-1"></script>
+<script src="js/content-render.js?v=20260923-1"></script>
+<script src="js/art-works-scroll.js?v=20260923-1"></script>
+<script src="js/studio.js?v=20260923-1"></script>
+<script src="js/site.js?v=20260923-1"></script>
 </body>
 </html>

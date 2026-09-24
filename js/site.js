@@ -14,11 +14,6 @@
   var SLIDE_MS = 5200;               // hero crossfade interval
   var MAX_EDGE = 1800;               // uploads are downscaled to this longest edge
 
-  // Set to a URL that accepts POST JSON to deliver the contact form
-  // server-side. While null, the form falls back to a prefilled mailto:.
-  var FORM_ENDPOINT = null;
-  var CONTACT_EMAIL = 'nazlibelgin@gmail.com';
-
   /* ---------- source data ---------- */
 
   // `ratio` must match the delivered file's real pixel dimensions, not the
@@ -1293,48 +1288,21 @@
     var status = $('form-status');
     var btn = $('send-btn');
 
-    var name = form.elements.name.value.trim();
-    var email = form.elements.email.value.trim();
-    var message = form.elements.message.value.trim();
-
-    if (!name || !email || !message) {
-      status.textContent = 'Name, email and a message, please.';
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      status.textContent = 'That email does not look right.';
-      return;
-    }
-
-    if (FORM_ENDPOINT) {
-      btn.disabled = true;
-      status.textContent = 'Sending…';
-      fetch(FORM_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, email: email, message: message })
-      }).then(function (res) {
-        if (!res.ok) throw new Error('bad status');
-        btn.textContent = 'Sent — thank you';
-        status.textContent = 'Received. A reply comes when the paint allows.';
-        form.reset();
-      }).catch(function () {
-        status.textContent = 'That did not send. Email ' + CONTACT_EMAIL + ' directly.';
-      }).then(function () {
-        btn.disabled = false;
-      });
-      return;
-    }
-
-    // No endpoint configured: hand the message to the visitor's mail client.
-    var subject = 'Studio enquiry — ' + name;
-    var body = message + '\n\n— ' + name + '\n' + email;
-    window.location.href = 'mailto:' + CONTACT_EMAIL +
-      '?subject=' + encodeURIComponent(subject) +
-      '&body=' + encodeURIComponent(body);
-
-    btn.textContent = 'Sent — thank you';
-    status.textContent = 'Your mail client should be opening. If nothing happens, write to ' + CONTACT_EMAIL + '.';
+    var fields = {
+      name: form.elements.name.value,
+      email: form.elements.email.value,
+      message: form.elements.message.value,
+      website: form.elements.website.value
+    };
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    status.textContent = 'Sending…';
+    window.NBContact.submit(contentApi.sendContact, fields).then(function (outcome) {
+      status.textContent = outcome.message;
+      btn.textContent = outcome.ok ? 'Sent — thank you' : 'Send';
+      if (outcome.ok) form.reset();
+      btn.disabled = false;
+    });
   }
 
   /* ---------- boot ---------- */
