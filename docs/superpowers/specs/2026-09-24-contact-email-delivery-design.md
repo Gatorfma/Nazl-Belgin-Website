@@ -1,7 +1,7 @@
 # Contact Email Delivery Design
 
 Date: 2026-09-24
-Status: Awaiting written-spec review
+Status: Approved — implementation planned
 
 ## Purpose
 
