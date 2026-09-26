@@ -33,6 +33,34 @@ try {
   [IO.File]::WriteAllBytes((Join-Path $fixtureRoot 'first.jpg'), [byte[]](1, 2, 3))
 
   . $production -ProjectUrl 'https://project.supabase.co' -FunctionsOnly
+
+  function Invoke-RestMethod {
+    param([string]$Method, [string]$Uri, $Headers)
+    if ($Uri -match '/artworks\?') {
+      $response = [object[]]@(
+        [pscustomobject]@{ id = 'a1'; legacy_path = 'art/a1.jpg'; storage_path = $null },
+        [pscustomobject]@{ id = 'a2'; legacy_path = 'art/a2.jpg'; storage_path = $null }
+      )
+      Write-Output -NoEnumerate $response
+      return
+    }
+    if ($Uri -match '/media_items\?') {
+      $response = [object[]]@(
+        [pscustomobject]@{ id = 'm1'; kind = 'portrait'; legacy_path = 'art/p.jpg'; storage_path = $null }
+      )
+      Write-Output -NoEnumerate $response
+      return
+    }
+    throw "Unexpected REST URI in test: $Uri"
+  }
+  $liveRows = @(Get-LiveRows @{})
+  if ($liveRows.Count -ne 3) {
+    throw "Windows PowerShell REST arrays must become three migration rows; got $($liveRows.Count)."
+  }
+  if (($liveRows.id -join ',') -ne 'a1,a2,m1') {
+    throw "Live migration rows were combined or reordered: $($liveRows.id -join ',')"
+  }
+
   $script:remoteBytes = [byte[]](1, 2, 3)
   function Invoke-WebRequest {
     param([switch]$UseBasicParsing, [string]$Method, [string]$Uri, [string]$OutFile)

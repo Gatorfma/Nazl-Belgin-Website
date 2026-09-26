@@ -75,8 +75,8 @@ function Test-RemoteObjectMatches([string]$EncodedPath, [string]$SourcePath, $Mi
 }
 
 function Get-LiveRows($Headers) {
-  $artworks = @(Invoke-RestMethod -Method Get -Uri "$ProjectUrl/rest/v1/artworks?select=id,legacy_path,storage_path" -Headers $Headers)
-  $media = @(Invoke-RestMethod -Method Get -Uri "$ProjectUrl/rest/v1/media_items?select=id,kind,legacy_path,storage_path" -Headers $Headers)
+  $artworks = Invoke-RestMethod -Method Get -Uri "$ProjectUrl/rest/v1/artworks?select=id,legacy_path,storage_path" -Headers $Headers
+  $media = Invoke-RestMethod -Method Get -Uri "$ProjectUrl/rest/v1/media_items?select=id,kind,legacy_path,storage_path" -Headers $Headers
   $rows = @()
   foreach ($row in $artworks) {
     $rows += [pscustomobject]@{
