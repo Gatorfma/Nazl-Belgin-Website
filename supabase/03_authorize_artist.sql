@@ -2,7 +2,7 @@
 -- Change this one email literal if the artist's login differs from her contact email.
 do $$
 declare
-  target_email constant text := 'furkanmertaksakal@gmail.com';
+  target_email constant text := 'nazlibelgin@gmail.com';
   matched_ids uuid[];
 begin
   select array_agg(id) into matched_ids
