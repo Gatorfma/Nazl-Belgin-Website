@@ -1396,7 +1396,7 @@ textarea.field__input { resize: vertical; }
 [dir="rtl"] .cv__year,
 [dir="rtl"] .work__year,
 [dir="rtl"] .lb-num,
-[dir="rtl"] .count {
+[dir="rtl"] #count-label {
   unicode-bidi: isolate;
   direction: ltr;
   text-align: end;

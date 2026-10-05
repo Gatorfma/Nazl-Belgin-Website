@@ -49,9 +49,74 @@
     // carry a data-i18n attribute. Same mechanism, one place to look.
     ui: {
       'Untitled': { tr: 'İsimsiz', ar: 'بدون عنوان' },
-      'All': { tr: 'Tümü', ar: 'الكل' }
+      'All': { tr: 'Tümü', ar: 'الكل' },
+      'Click anywhere to close': {
+        tr: 'Kapatmak için herhangi bir yere tıklayın',
+        ar: 'انقر في أي مكان للإغلاق'
+      },
+
+      // Contact form. This is the site's only conversion point, so a visitor
+      // who mistypes an address must not be answered in a language they did
+      // not choose.
+      'Sending…': { tr: 'Gönderiliyor…', ar: 'جارٍ الإرسال…' },
+      'Send': { tr: 'Gönder', ar: 'إرسال' },
+      'Sent — thank you': { tr: 'Gönderildi — teşekkürler', ar: 'تم الإرسال — شكرًا لك' },
+      'Name, email and a message, please.': {
+        tr: 'Ad, e-posta ve bir mesaj gerekiyor.',
+        ar: 'الاسم والبريد الإلكتروني والرسالة مطلوبة.'
+      },
+      'That email does not look right.': {
+        tr: 'Bu e-posta adresi doğru görünmüyor.',
+        ar: 'يبدو أن البريد الإلكتروني غير صحيح.'
+      },
+      'Please shorten the name or message before sending.': {
+        tr: 'Göndermeden önce adı veya mesajı kısaltın.',
+        ar: 'يُرجى اختصار الاسم أو الرسالة قبل الإرسال.'
+      },
+      'Received. A reply comes when the paint allows.': {
+        tr: 'Alındı. Boya izin verdiğinde yanıt gelecek.',
+        ar: 'تم الاستلام. سيأتي الرد حين يسمح الطلاء.'
+      },
+      'Too many notes were sent recently. Please wait ten minutes and try again.': {
+        tr: 'Kısa sürede çok fazla mesaj gönderildi. On dakika bekleyip tekrar deneyin.',
+        ar: 'أُرسلت رسائل كثيرة مؤخرًا. يُرجى الانتظار عشر دقائق والمحاولة مرة أخرى.'
+      },
+      'That did not send. Please try again or use the email link beside the form.': {
+        tr: 'Gönderilemedi. Tekrar deneyin ya da formun yanındaki e-posta bağlantısını kullanın.',
+        ar: 'لم يتم الإرسال. حاول مرة أخرى أو استخدم رابط البريد الإلكتروني بجانب النموذج.'
+      }
     }
   };
+
+  /*
+   * The work counter needs grammar, not a lookup. Turkish takes no plural
+   * marker after a numeral ("30 eser"), and Arabic numeral agreement has
+   * separate singular, dual and plural cases, so Arabic uses a label form
+   * that sidesteps agreement entirely.
+   */
+  /*
+   * Alt text for a work with no title yet. Built per language rather than by
+   * joining translated words, because the word order and the connectors
+   * differ: English appends "series", Turkish appends "serisi", and Arabic
+   * puts "سلسلة" in front after an Arabic comma.
+   */
+  function untitledAlt(series, lang) {
+    var name = series ? translateTerm('series', series, lang) : '';
+    if (lang === 'tr') {
+      return 'İsimsiz resim' + (name ? ', ' + name + ' serisi' : '');
+    }
+    if (lang === 'ar') {
+      return 'لوحة بدون عنوان' + (name ? '، سلسلة ' + name : '');
+    }
+    return 'Untitled painting' + (name ? ', ' + name + ' series' : '');
+  }
+
+  function countLabel(n, lang) {
+    var count = Number(n) || 0;
+    if (lang === 'tr') return count + ' eser';
+    if (lang === 'ar') return 'الأعمال: ' + count;
+    return count + (count === 1 ? ' work' : ' works');
+  }
 
   // An unmapped value returns unchanged, so a series added through the studio
   // after launch shows its English name rather than blank.
@@ -72,6 +137,8 @@
 
   return {
     translateTerm: translateTerm,
+    countLabel: countLabel,
+    untitledAlt: untitledAlt,
     currentLang: currentLang,
     TERMS: TERMS
   };

@@ -36,6 +36,23 @@
     return out.sort();
   }
 
+  // Total marker occurrences, not distinct keys: a key used by two elements
+  // counts twice, so one unreachable occurrence still shows as a shortfall.
+  function countMarkers(html) {
+    var total = 0;
+    var match;
+
+    TEXT_MARKER.lastIndex = 0;
+    while ((match = TEXT_MARKER.exec(html)) !== null) total++;
+
+    ATTR_MARKER.lastIndex = 0;
+    while ((match = ATTR_MARKER.exec(html)) !== null) {
+      total += parseAttrSpec(match[1]).length;
+    }
+
+    return total;
+  }
+
   function collectKeys(html) {
     var text = [];
     var attr = [];
@@ -65,11 +82,20 @@
       .replace(/'/g, '&#39;');
   }
 
-  function applyTranslations(html, dict) {
+  // Returns the rewritten HTML together with the keys that were actually
+  // substituted. The build compares that list against the markers it found:
+  // a marker the regexes cannot reach (void element, nested same tag, an
+  // attribute containing '>') would otherwise be skipped in silence.
+  function substitute(html, dict) {
+    var replaced = Object.create(null);
+    var count = 0;
+
     var out = html.replace(
       /(<([a-zA-Z0-9-]+)\b[^>]*\sdata-i18n="([^"]+)"[^>]*>)([\s\S]*?)(<\/\2>)/g,
       function (whole, open, tag, key, body, close) {
         if (!Object.prototype.hasOwnProperty.call(dict, key)) return whole;
+        replaced[key] = true;
+        count++;
         // Escape first, then turn newlines into breaks: a translation never
         // contains raw HTML, but multi-line copy still renders as lines.
         return open + escapeText(dict[key]).replace(/\r?\n/g, '<br>') + close;
@@ -83,6 +109,9 @@
         parseAttrSpec(spec).forEach(function (entry) {
           if (!Object.prototype.hasOwnProperty.call(dict, entry.key)) return;
           var pattern = new RegExp('(\\s' + entry.attribute + '=")[^"]*(")');
+          if (!pattern.test(rewritten)) return;
+          replaced[entry.key] = true;
+          count++;
           rewritten = rewritten.replace(
             pattern,
             '$1' + escapeAttr(dict[entry.key]).replace(/\$/g, '$$$$') + '$2'
@@ -92,7 +121,11 @@
       }
     );
 
-    return out;
+    return { html: out, replaced: Object.keys(replaced).sort(), count: count };
+  }
+
+  function applyTranslations(html, dict) {
+    return substitute(html, dict).html;
   }
 
   var SITE = 'https://nazlibelgin.com/';
@@ -166,7 +199,10 @@
           return whole;
         }
         data.description = dict['meta.jsonLdDescription'];
-        return open + '\n' + JSON.stringify(data, null, 2) + '\n' + close;
+        // JSON.stringify does not escape '/', so a description containing
+        // </script> would terminate the block early and run what follows.
+        var json = JSON.stringify(data, null, 2).replace(/</g, '\\u003c');
+        return open + '\n' + json + '\n' + close;
       }
     );
   }
@@ -187,8 +223,11 @@
       return list.indexOf(key) === index;
     }).sort();
 
+    // An empty translation would blank the element and still pass a
+    // hasOwnProperty check, so it counts as missing rather than as a value.
     var missing = used.filter(function (key) {
-      return !Object.prototype.hasOwnProperty.call(dict, key);
+      if (!Object.prototype.hasOwnProperty.call(dict, key)) return true;
+      return String(dict[key]).trim() === '';
     });
 
     var orphaned = Object.keys(dict).filter(function (key) {
@@ -209,8 +248,10 @@
 
   return {
     collectKeys: collectKeys,
+    countMarkers: countMarkers,
     parseAttrSpec: parseAttrSpec,
     applyTranslations: applyTranslations,
+    substitute: substitute,
     escapeText: escapeText,
     absolutizeAssets: absolutizeAssets,
     validateKeys: validateKeys,

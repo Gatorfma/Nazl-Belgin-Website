@@ -6,6 +6,20 @@ var fs = require('node:fs');
 
 var css = fs.readFileSync(__dirname + '/../css/site.css', 'utf8');
 
+// Pull one rule out of the stylesheet by a property it declares, so the
+// assertions below are about THAT rule's selector list rather than about the
+// two strings happening to appear somewhere in the file in the right order.
+function ruleDeclaring(property) {
+  var re = /([^{}]+)\{([^}]*)\}/g;
+  var match;
+  while ((match = re.exec(css)) !== null) {
+    if (match[2].indexOf(property) !== -1) {
+      return { selectors: match[1].trim(), body: match[2] };
+    }
+  }
+  return null;
+}
+
 test('no physical inline margins remain', function () {
   assert.doesNotMatch(css, /margin-(left|right)\s*:/);
 });
@@ -19,15 +33,37 @@ test('no physical text alignment remains', function () {
 });
 
 // Review Focus: Latin runs and digits inside Arabic reorder under RTL.
-// Isolation keeps "2025 · 4:12" and "Historia Art Studio" readable.
-test('numeric runs are bidi-isolated under rtl', function () {
-  assert.match(css, /\[dir="rtl"\][\s\S]*unicode-bidi:\s*isolate/);
+// Isolation keeps "2025 · 4:12" and the Latin studio names readable.
+test('the bidi-isolation rule is scoped to rtl and names the mixed-content elements', function () {
+  var rule = ruleDeclaring('unicode-bidi: isolate');
+  assert.ok(rule, 'no rule declares unicode-bidi: isolate');
+  assert.match(rule.selectors, /\[dir="rtl"\]/);
+  ['.film__meta', '.cv__year', '.work__year', '.lb-num'].forEach(function (sel) {
+    assert.ok(rule.selectors.indexOf(sel) !== -1,
+      sel + ' is not bidi-isolated');
+  });
+});
+
+// Final review, Minor #10: .count is on two elements — #count-label, whose
+// text is a Latin numeral, and the noscript paragraph, which in Arabic is
+// two full sentences. Forcing direction: ltr on Arabic prose is wrong.
+test('direction is forced only on the numeric counter, not on every .count', function () {
+  var rule = ruleDeclaring('unicode-bidi: isolate');
+  assert.ok(rule.selectors.indexOf('#count-label') !== -1,
+    'the numeric counter should be isolated by id');
+  assert.ok(!/(^|[\s,])\.count(?![a-zA-Z_-])/.test(rule.selectors),
+    'the bare .count class forces ltr on the Arabic noscript paragraph too');
 });
 
 test('arabic page gets an arabic display face', function () {
-  assert.match(css, /\[dir="rtl"\][\s\S]*'Amiri'/);
+  var rule = ruleDeclaring("'Amiri'");
+  assert.ok(rule, "no rule declares the 'Amiri' family");
+  assert.match(rule.selectors, /\[dir="rtl"\]/);
+  assert.match(rule.selectors, /\.hero__title/);
 });
 
 test('arabic page gets an arabic body face', function () {
-  assert.match(css, /\[dir="rtl"\][\s\S]*'Noto Sans Arabic'/);
+  var rule = ruleDeclaring("'Noto Sans Arabic'");
+  assert.ok(rule, "no rule declares the 'Noto Sans Arabic' family");
+  assert.match(rule.selectors, /\[dir="rtl"\]\s*body/);
 });

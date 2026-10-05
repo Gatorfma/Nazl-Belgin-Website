@@ -250,3 +250,65 @@ test('rewriteHead does not duplicate pre-existing hreflang links', function () {
   assert.equal((out.match(/hreflang="x-default"/g) || []).length, 1);
   assert.equal((out.match(/rel="alternate"/g) || []).length, 4);
 });
+
+// Final review, Important #1: validateKeys only compares dictionary keys to
+// marker keys. A marker the substitution regex cannot reach (void element,
+// nested same tag, attribute containing '>') was silently skipped and the
+// build still exited 0 — the same user-visible outcome as a missing key.
+test('substitute reports which keys it actually replaced', function () {
+  var html = '<p data-i18n="a">x</p><meta data-i18n-attr="content:b" content="y">';
+  var out = transform.substitute(html, { a: 'A', b: 'B' });
+  assert.deepEqual(out.replaced, ['a', 'b']);
+  assert.match(out.html, />A</);
+});
+
+test('substitute does not report a void element it could not reach', function () {
+  var out = transform.substitute('<img data-i18n="a" src="x.png">', { a: 'A' });
+  assert.deepEqual(out.replaced, []);
+});
+
+test('substitute does not report a marker whose attribute holds a bracket', function () {
+  var out = transform.substitute('<p title="a > b" data-i18n="a">old</p>', { a: 'A' });
+  assert.deepEqual(out.replaced, []);
+});
+
+// Final review, Minor #7: an empty translation passes hasOwnProperty and
+// blanks the element — an invisible, unclickable nav item, build exit 0.
+test('validateKeys counts an empty translation as missing', function () {
+  var html = '<p data-i18n="a">x</p>';
+  assert.deepEqual(transform.validateKeys(html, { a: '' }).missing, ['a']);
+  assert.deepEqual(transform.validateKeys(html, { a: '   ' }).missing, ['a']);
+});
+
+// Final review, Important #2: JSON.stringify does not escape '/', so a
+// description containing </script> terminates the ld+json block early and
+// anything after it executes as script.
+test('localizeJsonLd cannot break out of the script block', function () {
+  var html = '<script type="application/ld+json">{ "description": "x" }</script>';
+  var out = transform.localizeJsonLd(html, {
+    'meta.jsonLdDescription': 'x</script><script>alert(1)</script>'
+  });
+  assert.equal((out.match(/<\/script>/g) || []).length, 1);
+  assert.doesNotMatch(out, /<script>alert/);
+  var body = out.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  assert.equal(JSON.parse(body).description, 'x</script><script>alert(1)</script>');
+});
+
+// The first version of this guard compared key SETS, so a key used twice --
+// once reachably, once not -- looked fully substituted. Count occurrences.
+test('substitute counts every substitution, not every distinct key', function () {
+  var html = '<p data-i18n="a">x</p><span data-i18n="a">y</span>';
+  assert.equal(transform.substitute(html, { a: 'A' }).count, 2);
+});
+
+test('countMarkers counts occurrences including repeats', function () {
+  var html = '<p data-i18n="a">x</p><span data-i18n="a">y</span>' +
+             '<meta data-i18n-attr="content:b" content="z">';
+  assert.equal(transform.countMarkers(html), 3);
+});
+
+test('an unreachable duplicate occurrence shows up as a count shortfall', function () {
+  var html = '<p data-i18n="a">x</p><img data-i18n="a" src="y.png">';
+  assert.equal(transform.countMarkers(html), 2);
+  assert.equal(transform.substitute(html, { a: 'A' }).count, 1);
+});

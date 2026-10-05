@@ -102,10 +102,13 @@
   // Closed vocabularies stored in English (series, medium) and strings built
   // here rather than marked in the HTML. Falls through unchanged when the
   // module is absent or the value is unmapped.
+  function docLang() {
+    return document.documentElement.getAttribute('lang') || 'en';
+  }
+
   function term(kind, value) {
     if (!window.NBI18nTerms) return value;
-    return window.NBI18nTerms.translateTerm(
-      kind, value, document.documentElement.getAttribute('lang') || 'en');
+    return window.NBI18nTerms.translateTerm(kind, value, docLang());
   }
 
   // Most of the archive has no title yet, so fall back to "Untitled" for
@@ -118,7 +121,9 @@
   function altText(w) {
     return (w.title && String(w.title).trim())
       ? w.title
-      : term('ui', 'Untitled') + ' — ' + term('series', w.series);
+      : (window.NBI18nTerms
+          ? window.NBI18nTerms.untitledAlt(w.series, docLang())
+          : 'Untitled painting' + (w.series ? ', ' + w.series + ' series' : ''));
   }
 
   function titleFromFile(name) {
@@ -398,7 +403,9 @@
     var list = visibleWorks();
     var drag = canDrag();
 
-    $('count-label').textContent = list.length + (list.length === 1 ? ' work' : ' works');
+    $('count-label').textContent = window.NBI18nTerms
+      ? window.NBI18nTerms.countLabel(list.length, docLang())
+      : list.length + (list.length === 1 ? ' work' : ' works');
 
     $('works-grid').innerHTML = list.map(function (w) {
       var ratio = w.ratio || '1 / 1';
@@ -502,7 +509,8 @@
       if (w.medium) parts.push('<span>' + esc(term('medium', w.medium)) + '</span>');
       if (w.dims) parts.push('<span>' + esc(w.dims) + '</span>');
       if (w.series) parts.push('<span class="lb-series">' + esc(term('series', w.series)) + '</span>');
-      parts.push('<span class="lb-hint">Click anywhere to close</span>');
+      parts.push('<span class="lb-hint">' +
+        esc(term('ui', 'Click anywhere to close')) + '</span>');
       meta.innerHTML = parts.join('');
     }
 
@@ -1318,11 +1326,11 @@
       website: form.elements.website.value
     };
     btn.disabled = true;
-    btn.textContent = 'Sending…';
-    status.textContent = 'Sending…';
+    btn.textContent = term('ui', 'Sending…');
+    status.textContent = term('ui', 'Sending…');
     window.NBContact.submit(contentApi.sendContact, fields).then(function (outcome) {
-      status.textContent = outcome.message;
-      btn.textContent = outcome.ok ? 'Sent — thank you' : 'Send';
+      status.textContent = term('ui', outcome.message);
+      btn.textContent = term('ui', outcome.ok ? 'Sent — thank you' : 'Send');
       if (outcome.ok) form.reset();
       btn.disabled = false;
     });

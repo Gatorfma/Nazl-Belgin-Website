@@ -80,3 +80,67 @@ test('UI strings fall back to English', function () {
   assert.equal(terms.translateTerm('ui', 'All', 'en'), 'All');
   assert.equal(terms.translateTerm('ui', 'Unmapped', 'tr'), 'Unmapped');
 });
+
+// Final review, Important #4: these reach every visitor on /tr/ and /ar/ but
+// were still English. The contact form is the site's only conversion point.
+test('translates the public lightbox and form strings', function () {
+  assert.equal(terms.translateTerm('ui', 'Click anywhere to close', 'tr'),
+    'Kapatmak için herhangi bir yere tıklayın');
+  assert.equal(terms.translateTerm('ui', 'Send', 'ar'), 'إرسال');
+  assert.equal(terms.translateTerm('ui', 'That email does not look right.', 'tr'),
+    'Bu e-posta adresi doğru görünmüyor.');
+});
+
+test('every contact outcome message has both translations', function () {
+  [
+    'Name, email and a message, please.',
+    'That email does not look right.',
+    'Please shorten the name or message before sending.',
+    'Received. A reply comes when the paint allows.',
+    'Too many notes were sent recently. Please wait ten minutes and try again.',
+    'That did not send. Please try again or use the email link beside the form.'
+  ].forEach(function (msg) {
+    ['tr', 'ar'].forEach(function (lang) {
+      assert.notEqual(terms.translateTerm('ui', msg, lang), msg,
+        'no ' + lang + ' translation for: ' + msg);
+    });
+  });
+});
+
+// Turkish takes no plural marker after a numeral; Arabic numeral agreement
+// has singular/dual/plural cases, so it uses a label form instead.
+test('countLabel reads correctly in each language', function () {
+  assert.equal(terms.countLabel(30, 'en'), '30 works');
+  assert.equal(terms.countLabel(1, 'en'), '1 work');
+  assert.equal(terms.countLabel(30, 'tr'), '30 eser');
+  assert.equal(terms.countLabel(1, 'tr'), '1 eser');
+  assert.equal(terms.countLabel(30, 'ar'), 'الأعمال: 30');
+});
+
+test('countLabel falls back to English for an unknown language', function () {
+  assert.equal(terms.countLabel(5, 'de'), '5 works');
+});
+
+// Final review, Minor #6 (re-graded): the English alt text regressed from
+// "Untitled painting, Monsters series" to "Untitled — Monsters", losing both
+// "painting" and "series" for screen-reader users on the site that already
+// worked. Compose per language rather than gluing translated words.
+test('untitledAlt reads as a sentence in each language', function () {
+  assert.equal(terms.untitledAlt('Monsters', 'en'),
+    'Untitled painting, Monsters series');
+  assert.equal(terms.untitledAlt('Monsters', 'tr'),
+    'İsimsiz resim, Canavarlar serisi');
+  assert.equal(terms.untitledAlt('Monsters', 'ar'),
+    'لوحة بدون عنوان، سلسلة وحوش');
+});
+
+test('untitledAlt omits the series clause when there is no series', function () {
+  assert.equal(terms.untitledAlt('', 'en'), 'Untitled painting');
+  assert.equal(terms.untitledAlt(null, 'tr'), 'İsimsiz resim');
+  assert.doesNotMatch(terms.untitledAlt('', 'en'), /—|,\s*$/);
+});
+
+test('untitledAlt keeps an unmapped series name', function () {
+  assert.equal(terms.untitledAlt('New Series', 'tr'),
+    'İsimsiz resim, New Series serisi');
+});

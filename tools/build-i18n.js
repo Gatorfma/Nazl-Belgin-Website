@@ -43,7 +43,27 @@ function build() {
       }
       if (report.missing.length) return;
 
-      var html = transform.applyTranslations(source, dict);
+      var result = transform.substitute(source, dict);
+
+      // A marker the substitution could not reach — a void element, a nested
+      // same-named tag, an attribute holding '>' — would otherwise ship as
+      // English with the build still reporting success. Compare occurrences,
+      // not distinct keys: a key used twice, reachable once, must still fail.
+      var expected = transform.countMarkers(source);
+      if (result.count !== expected) {
+        failed = true;
+        console.error('[' + lang + '] substituted ' + result.count + ' of ' +
+          expected + ' markers — ' + (expected - result.count) +
+          ' could not be reached. Check the element shape (void elements and ' +
+          'nested same-name tags cannot be substituted).');
+        var never = transform.collectKeys(source);
+        never.text.concat(never.attr).forEach(function (key) {
+          if (result.replaced.indexOf(key) === -1) console.error('  - ' + key);
+        });
+        return;
+      }
+
+      var html = result.html;
       html = transform.localizeJsonLd(html, dict);
       html = transform.rewriteHead(html, lang);
       html = transform.absolutizeAssets(html);
