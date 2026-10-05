@@ -99,17 +99,26 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  // Closed vocabularies stored in English (series, medium) and strings built
+  // here rather than marked in the HTML. Falls through unchanged when the
+  // module is absent or the value is unmapped.
+  function term(kind, value) {
+    if (!window.NBI18nTerms) return value;
+    return window.NBI18nTerms.translateTerm(
+      kind, value, document.documentElement.getAttribute('lang') || 'en');
+  }
+
   // Most of the archive has no title yet, so fall back to "Untitled" for
   // display while leaving the stored value empty for the studio editor.
   function shownTitle(w) {
-    return (w.title && String(w.title).trim()) ? w.title : 'Untitled';
+    return (w.title && String(w.title).trim()) ? w.title : term('ui', 'Untitled');
   }
 
   // Alt text should still say something useful for an untitled work.
   function altText(w) {
     return (w.title && String(w.title).trim())
       ? w.title
-      : 'Untitled painting, ' + w.series + ' series';
+      : term('ui', 'Untitled') + ' — ' + term('series', w.series);
   }
 
   function titleFromFile(name) {
@@ -365,11 +374,14 @@
     $('year-group').hidden = years.length < 2;
     if (years.length < 2 && state.year !== 'All') state.year = 'All';
 
+    // data-value keeps the stored English value so filtering is unaffected;
+    // only the visible label is translated.
     $('series-filters').innerHTML = SERIES_ORDER.map(function (s) {
+      var label = s === 'All' ? term('ui', 'All') : term('series', s);
       return '<button class="filter' + (state.series === s ? ' is-on' : '') +
              '" type="button" data-filter="series" data-value="' + esc(s) + '"' +
              (state.series === s ? ' aria-current="true"' : '') +
-             '>' + esc(s) + '</button>';
+             '>' + esc(label) + '</button>';
     }).join('');
 
     $('year-filters').innerHTML = ['All'].concat(years).map(function (y) {
@@ -487,9 +499,9 @@
       // read as a gap in the record.
       var parts = ['<span class="lb-title">' + esc(shownTitle(w)) + '</span>'];
       if (w.year) parts.push('<span class="lb-num">' + esc(w.year) + '</span>');
-      if (w.medium) parts.push('<span>' + esc(w.medium) + '</span>');
+      if (w.medium) parts.push('<span>' + esc(term('medium', w.medium)) + '</span>');
       if (w.dims) parts.push('<span>' + esc(w.dims) + '</span>');
-      if (w.series) parts.push('<span class="lb-series">' + esc(w.series) + '</span>');
+      if (w.series) parts.push('<span class="lb-series">' + esc(term('series', w.series)) + '</span>');
       parts.push('<span class="lb-hint">Click anywhere to close</span>');
       meta.innerHTML = parts.join('');
     }
