@@ -1,0 +1,15 @@
+# nazlibelgin.com
+# The site is a single page; everything below the root is assets.
+
+User-agent: *
+Allow: /
+
+# Repository scaffolding that GitHub Pages serves but which is not part of
+# the site. Keeping it out of search results avoids SQL files and build
+# scripts surfacing under the artist's name.
+Disallow: /supabase/
+Disallow: /tools/
+Disallow: /docs/
+Disallow: /.claude/
+
+Sitemap: https://nazlibelgin.com/sitemap.xml
