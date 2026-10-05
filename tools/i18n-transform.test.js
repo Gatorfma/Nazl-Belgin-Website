@@ -233,3 +233,20 @@ test('localizeJsonLd output is still valid JSON', function () {
   assert.doesNotThrow(function () { JSON.parse(body); });
   assert.equal(JSON.parse(body).description, 'Ödül "x" & <y>');
 });
+
+// Ruling (Task 12): index.html carries its own hreflang links so the English
+// page is part of the cluster. rewriteHead must replace them, not add a
+// second set, or the generated pages would advertise each language twice.
+test('rewriteHead does not duplicate pre-existing hreflang links', function () {
+  var withLinks = HEAD_FIXTURE.replace(
+    '<meta property="og:url"',
+    '<link rel="alternate" hreflang="en" href="https://nazlibelgin.com/">\n' +
+    '<link rel="alternate" hreflang="tr" href="https://nazlibelgin.com/tr/">\n' +
+    '<link rel="alternate" hreflang="ar" href="https://nazlibelgin.com/ar/">\n' +
+    '<link rel="alternate" hreflang="x-default" href="https://nazlibelgin.com/">\n' +
+    '<meta property="og:url"');
+  var out = transform.rewriteHead(withLinks, 'tr');
+  assert.equal((out.match(/hreflang="en"/g) || []).length, 1);
+  assert.equal((out.match(/hreflang="x-default"/g) || []).length, 1);
+  assert.equal((out.match(/rel="alternate"/g) || []).length, 4);
+});

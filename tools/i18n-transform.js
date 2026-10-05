@@ -131,6 +131,11 @@
       '$1' + LOCALES[lang] + '$2'
     );
 
+    // index.html carries its own hreflang links so the English page joins the
+    // cluster. Strip them before inserting, or the generated pages would
+    // advertise every language twice.
+    out = out.replace(/\n?[ \t]*<link rel="alternate" hreflang="[^"]*"[^>]*>/g, '');
+
     out = out.replace(
       /(<link rel="canonical"[^>]*>)/,
       '$1\n' + hreflangBlock()
