@@ -124,6 +124,21 @@ test('localizeJsonLd leaves the block alone when the key is absent', function ()
   assert.equal(transform.localizeJsonLd(html, {}), html);
 });
 
+// Ruling (Task 6): manifesto beats hold several lines separated by <br>.
+// Translations carry a real newline and the text path turns it into <br>,
+// so a dictionary never has to contain raw HTML.
+test('applyTranslations turns newlines into line breaks in text', function () {
+  var html = '<p data-i18n="k">a<br>b</p>';
+  var out = transform.applyTranslations(html, { k: 'bir\niki\nüç' });
+  assert.match(out, /<p data-i18n="k">bir<br>iki<br>üç<\/p>/);
+});
+
+test('applyTranslations does not turn newlines into breaks in attributes', function () {
+  var html = '<img data-i18n-attr="alt:k" alt="x">';
+  var out = transform.applyTranslations(html, { k: 'bir\niki' });
+  assert.doesNotMatch(out, /<br>/);
+});
+
 // Review Focus: a key present in one language file but missing from another
 // must fail the build naming the key, not emit a half-translated page.
 test('validateKeys reports keys missing from the dictionary', function () {
@@ -141,6 +156,19 @@ test('validateKeys reports orphaned dictionary keys', function () {
 test('validateKeys ignores _source companion keys', function () {
   var html = '<p data-i18n="a">x</p>';
   var result = transform.validateKeys(html, { a: 'A', 'a._source': 'original' });
+  assert.deepEqual(result.orphaned, []);
+  assert.deepEqual(result.missing, []);
+});
+
+// Ruling (Task 6): meta.jsonLdDescription is consumed by localizeJsonLd, not
+// by a data-i18n marker, so the orphan check must exempt it or every build
+// would warn about it forever.
+test('validateKeys does not call build-consumed keys orphaned', function () {
+  var html = '<p data-i18n="a">x</p>';
+  var result = transform.validateKeys(html, {
+    a: 'A',
+    'meta.jsonLdDescription': 'Açıklama'
+  });
   assert.deepEqual(result.orphaned, []);
   assert.deepEqual(result.missing, []);
 });

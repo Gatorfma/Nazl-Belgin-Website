@@ -70,7 +70,9 @@
       /(<([a-zA-Z0-9-]+)\b[^>]*\sdata-i18n="([^"]+)"[^>]*>)([\s\S]*?)(<\/\2>)/g,
       function (whole, open, tag, key, body, close) {
         if (!Object.prototype.hasOwnProperty.call(dict, key)) return whole;
-        return open + escapeText(dict[key]) + close;
+        // Escape first, then turn newlines into breaks: a translation never
+        // contains raw HTML, but multi-line copy still renders as lines.
+        return open + escapeText(dict[key]).replace(/\r?\n/g, '<br>') + close;
       }
     );
 
@@ -162,6 +164,10 @@
     return /\._source$/.test(key);
   }
 
+  // Keys the build reads directly rather than through a data-i18n marker.
+  // Without this the orphan check would flag them on every run.
+  var BUILD_CONSUMED = { 'meta.jsonLdDescription': true };
+
   function validateKeys(html, dict) {
     var found = collectKeys(html);
     var used = found.text.concat(found.attr).filter(function (key, index, list) {
@@ -173,7 +179,7 @@
     });
 
     var orphaned = Object.keys(dict).filter(function (key) {
-      return !isSourceKey(key) && used.indexOf(key) === -1;
+      return !isSourceKey(key) && !BUILD_CONSUMED[key] && used.indexOf(key) === -1;
     }).sort();
 
     return { missing: missing, orphaned: orphaned };
