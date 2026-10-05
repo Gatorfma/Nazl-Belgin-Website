@@ -89,5 +89,6 @@
   "contact.fieldMessage": "الرسالة",
   "contact.send": "إرسال",
   "footer.copy": "نازلي بلغين. جميع الأعمال مستنسخة بإذن.",
-  "nav.languageLabel": "اللغة"
+  "nav.languageLabel": "اللغة",
+  "fonts.arabic": "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@300;400;500&display=swap"
 }

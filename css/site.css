@@ -72,7 +72,7 @@ img { max-width: 100%; display: block; }
 
 .skip {
   position: absolute;
-  left: -9999px;
+  inset-inline-start: -9999px;
   top: 0;
   z-index: 100;
   padding: 12px 20px;
@@ -82,7 +82,7 @@ img { max-width: 100%; display: block; }
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
-.skip:focus { left: 0; color: var(--bg); }
+.skip:focus { inset-inline-start: 0; color: var(--bg); }
 
 /* ---------- nav ---------- */
 
@@ -348,7 +348,7 @@ img { max-width: 100%; display: block; }
   border: none;
   background: none;
   cursor: inherit;
-  text-align: left;
+  text-align: start;
 }
 
 .work__img { width: 100%; }
@@ -365,7 +365,7 @@ img { max-width: 100%; display: block; }
 .work__title { font-style: italic; }
 .work__year { color: var(--mute); font-variant-numeric: tabular-nums; }
 .work__drag {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -544,7 +544,7 @@ img { max-width: 100%; display: block; }
   .artworks__panel--spotify .artworks__reveal {
     max-height: calc(100svh - clamp(80px, 14vh, 160px) - clamp(64px, 8vw, 108px));
     overflow-y: auto;
-    padding-right: 10px;
+    padding-inline-end: 10px;
     scrollbar-width: thin;
     scrollbar-color: var(--line-in) transparent;
   }
@@ -648,7 +648,7 @@ img { max-width: 100%; display: block; }
 
 .manifesto__beat--right {
   align-self: flex-end;
-  text-align: right;
+  text-align: end;
 }
 
 .manifesto__beat--protest {
@@ -813,7 +813,7 @@ img { max-width: 100%; display: block; }
 .bio-beat--origin {
   align-self: flex-end;
   max-width: 38ch;
-  text-align: right;
+  text-align: end;
   font-size: clamp(16px, 1.7vw, 20px);
   line-height: 1.75;
   color: var(--body);
@@ -842,7 +842,7 @@ img { max-width: 100%; display: block; }
 .bio-beat--close {
   align-self: flex-end;
   max-width: 26ch;
-  text-align: right;
+  text-align: end;
   font-family: var(--serif);
   font-size: clamp(25px, 3.8vw, 48px);
   line-height: 1.16;
@@ -906,7 +906,7 @@ img { max-width: 100%; display: block; }
   .manifesto__beat--truth,
   .manifesto__beat--stone {
     align-self: flex-start;
-    text-align: left;
+    text-align: start;
   }
 
   .about__opening { grid-template-columns: 1fr; gap: 32px; }
@@ -917,7 +917,7 @@ img { max-width: 100%; display: block; }
   .bio-beat--practice,
   .bio-beat--close {
     align-self: flex-start;
-    text-align: left;
+    text-align: start;
   }
   .bio-beat--pivot { align-self: flex-start; }
 }
@@ -969,7 +969,7 @@ img { max-width: 100%; display: block; }
 
 .form__trap {
   position: absolute;
-  left: -10000px;
+  inset-inline-start: -10000px;
   width: 1px;
   height: 1px;
   overflow: hidden;
@@ -1018,7 +1018,7 @@ textarea.field__input { resize: vertical; }
   color: var(--mute);
 }
 .footer__studio {
-  margin-left: auto;
+  margin-inline-start: auto;
   background: none;
   border: none;
   padding: 0;
@@ -1138,7 +1138,7 @@ textarea.field__input { resize: vertical; }
   text-transform: none;
   color: var(--status);
 }
-#bar-upload { margin-left: auto; }
+#bar-upload { margin-inline-start: auto; }
 
 /* ---------- content manager ---------- */
 
@@ -1207,7 +1207,7 @@ textarea.field__input { resize: vertical; }
   color: var(--mute);
   cursor: pointer;
   font: inherit;
-  text-align: left;
+  text-align: start;
 }
 .manager__nav button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--blue); }
 .manager__content { min-width: 0; padding-bottom: 100px; }
@@ -1267,15 +1267,15 @@ textarea.field__input { resize: vertical; }
   font-size: 11px;
 }
 .manager__actions button[type="submit"] { color: var(--blue); }
-.manager__actions .manager__delete { margin-left: auto; color: var(--red); }
+.manager__actions .manager__delete { margin-inline-start: auto; color: var(--red); }
 .manager__actions button[disabled] { opacity: 0.45; cursor: default; }
 
 @media (max-width: 720px) {
   .manager__layout { grid-template-columns: 1fr; gap: 28px; }
   .manager__nav { flex-direction: row; overflow-x: auto; }
-  .manager__nav button { flex: 0 0 auto; padding: 10px 18px 10px 0; margin-right: 18px; }
+  .manager__nav button { flex: 0 0 auto; padding-block: 10px; padding-inline: 0 18px; margin-inline-end: 18px; }
   .manager__row { grid-template-columns: 1fr; }
-  .manager__actions .manager__delete { margin-left: 0; }
+  .manager__actions .manager__delete { margin-inline-start: 0; }
 }
 
 /* ---------- lightbox ---------- */
@@ -1332,7 +1332,7 @@ textarea.field__input { resize: vertical; }
 .lightbox__meta .lb-num { font-variant-numeric: tabular-nums; }
 .lightbox__meta .lb-series { color: var(--mute); }
 .lightbox__meta .lb-hint {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--mute);
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1353,7 +1353,7 @@ textarea.field__input { resize: vertical; }
   gap: 16px 24px;
 }
 .lightbox__actions { display: flex; flex-wrap: wrap; gap: 14px; }
-.lightbox__done { margin-left: auto; }
+.lightbox__done { margin-inline-start: auto; }
 
 /* ---------- motion preferences ---------- */
 
@@ -1370,4 +1370,40 @@ textarea.field__input { resize: vertical; }
   .artworks__viewport { overflow: visible; }
   .artworks__track { display: grid; height: auto; transform: none !important; will-change: auto; }
   .artworks__panel { min-height: 72svh; }
+}
+
+/* ---------- Arabic / right-to-left ---------- */
+
+/* Libre Caslon Display and Karla carry no Arabic glyphs, so the Arabic page
+   swaps in faces that do. Only ar/index.html loads them. */
+[dir="rtl"] body {
+  font-family: 'Noto Sans Arabic', 'Karla', system-ui, sans-serif;
+}
+
+[dir="rtl"] .hero__title,
+[dir="rtl"] .h2,
+[dir="rtl"] .h3,
+[dir="rtl"] .nav__mark,
+[dir="rtl"] .manifesto__beat,
+[dir="rtl"] .passgate__title {
+  font-family: 'Amiri', 'Libre Caslon Display', Georgia, serif;
+}
+
+/* Review Focus: Latin runs and digits inside Arabic text reorder visually
+   under RTL. Isolation keeps "2025 · 4:12" and "Historia Art Studio" in the
+   order they were written. */
+[dir="rtl"] .film__meta,
+[dir="rtl"] .cv__year,
+[dir="rtl"] .work__year,
+[dir="rtl"] .lb-num,
+[dir="rtl"] .count {
+  unicode-bidi: isolate;
+  direction: ltr;
+  text-align: end;
+}
+
+/* The language codes are Latin and must not reorder beside each other. */
+[dir="rtl"] .nav__langs {
+  unicode-bidi: isolate;
+  direction: ltr;
 }

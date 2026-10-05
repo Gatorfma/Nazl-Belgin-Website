@@ -89,5 +89,6 @@
   "contact.fieldMessage": "Mesaj",
   "contact.send": "Gönder",
   "footer.copy": "Nazlı Belgin. Tüm eserler izinle çoğaltılmıştır.",
-  "nav.languageLabel": "Dil"
+  "nav.languageLabel": "Dil",
+  "fonts.arabic": "data:text/css,"
 }
