@@ -124,6 +124,31 @@ test('localizeJsonLd leaves the block alone when the key is absent', function ()
   assert.equal(transform.localizeJsonLd(html, {}), html);
 });
 
+test('absolutizeAssets rewrites relative asset paths', function () {
+  var html = '<link href="css/site.css?v=1"><script src="js/site.js"></script>' +
+             '<img src="art/portrait/x.jpg"><link href="favicon.svg">';
+  var out = transform.absolutizeAssets(html);
+  assert.match(out, /href="\/css\/site\.css\?v=1"/);
+  assert.match(out, /src="\/js\/site\.js"/);
+  assert.match(out, /src="\/art\/portrait\/x\.jpg"/);
+  assert.match(out, /href="\/favicon\.svg"/);
+});
+
+test('absolutizeAssets leaves external and anchor links alone', function () {
+  var html = '<a href="#work">w</a><script src="https://cdn.example.com/a.js"></script>' +
+             '<a href="mailto:x@y.com">m</a><link href="//cdn.example.com/b.css">';
+  var out = transform.absolutizeAssets(html);
+  assert.match(out, /href="#work"/);
+  assert.match(out, /src="https:\/\/cdn\.example\.com\/a\.js"/);
+  assert.match(out, /href="mailto:x@y\.com"/);
+  assert.match(out, /href="\/\/cdn\.example\.com\/b\.css"/);
+});
+
+test('absolutizeAssets is idempotent', function () {
+  var once = transform.absolutizeAssets('<link href="css/site.css">');
+  assert.equal(transform.absolutizeAssets(once), once);
+});
+
 test('localizeJsonLd output is still valid JSON', function () {
   var html = '<script type="application/ld+json">\n' +
     '{ "@type": "Person", "description": "English text" }\n</script>';

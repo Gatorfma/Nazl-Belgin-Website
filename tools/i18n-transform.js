@@ -156,11 +156,21 @@
     );
   }
 
+  // The English page uses relative asset paths, which resolve to /tr/css/...
+  // from a subdirectory and 404. Root-absolute works from all three locations.
+  function absolutizeAssets(html) {
+    return html.replace(
+      /\s(href|src)="(css\/|js\/|art\/|favicon\.)/g,
+      ' $1="/$2'
+    );
+  }
+
   return {
     collectKeys: collectKeys,
     parseAttrSpec: parseAttrSpec,
     applyTranslations: applyTranslations,
     escapeText: escapeText,
+    absolutizeAssets: absolutizeAssets,
     rewriteHead: rewriteHead,
     urlFor: urlFor,
     localizeJsonLd: localizeJsonLd,
