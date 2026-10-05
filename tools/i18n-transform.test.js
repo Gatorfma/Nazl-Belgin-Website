@@ -64,3 +64,71 @@ test('applyTranslations leaves unmarked elements untouched', function () {
   var out = transform.applyTranslations(html, { k: 'y' });
   assert.match(out, /<a class="nav__mark">Nazlı Belgin<\/a>/);
 });
+
+var HEAD_FIXTURE = [
+  '<!DOCTYPE html>',
+  '<html lang="en">',
+  '<head>',
+  '<link rel="canonical" href="https://nazlibelgin.com/">',
+  '<meta property="og:url" content="https://nazlibelgin.com/">',
+  '<meta property="og:locale" content="en_US">',
+  '</head><body></body></html>'
+].join('\n');
+
+test('rewriteHead sets lang and rtl direction for Arabic', function () {
+  var out = transform.rewriteHead(HEAD_FIXTURE, 'ar');
+  assert.match(out, /<html lang="ar" dir="rtl">/);
+});
+
+test('rewriteHead sets lang without dir for Turkish', function () {
+  var out = transform.rewriteHead(HEAD_FIXTURE, 'tr');
+  assert.match(out, /<html lang="tr">/);
+  assert.doesNotMatch(out, /dir="rtl"/);
+});
+
+test('rewriteHead makes canonical self-referential', function () {
+  assert.match(transform.rewriteHead(HEAD_FIXTURE, 'tr'),
+    /<link rel="canonical" href="https:\/\/nazlibelgin\.com\/tr\/">/);
+});
+
+test('rewriteHead sets og:locale per language', function () {
+  assert.match(transform.rewriteHead(HEAD_FIXTURE, 'ar'), /content="ar_AR"/);
+  assert.match(transform.rewriteHead(HEAD_FIXTURE, 'tr'), /content="tr_TR"/);
+});
+
+test('rewriteHead injects four reciprocal hreflang links', function () {
+  var out = transform.rewriteHead(HEAD_FIXTURE, 'tr');
+  assert.match(out, /hreflang="en" href="https:\/\/nazlibelgin\.com\/"/);
+  assert.match(out, /hreflang="tr" href="https:\/\/nazlibelgin\.com\/tr\/"/);
+  assert.match(out, /hreflang="ar" href="https:\/\/nazlibelgin\.com\/ar\/"/);
+  assert.match(out, /hreflang="x-default" href="https:\/\/nazlibelgin\.com\/"/);
+});
+
+test('urlFor returns the root for English', function () {
+  assert.equal(transform.urlFor('en'), 'https://nazlibelgin.com/');
+  assert.equal(transform.urlFor('ar'), 'https://nazlibelgin.com/ar/');
+});
+
+test('localizeJsonLd replaces only the description field', function () {
+  var html = '<script type="application/ld+json">\n' +
+    '{ "@type": "Person", "name": "Nazlı Belgin", "description": "English text" }\n' +
+    '</script>';
+  var out = transform.localizeJsonLd(html, { 'meta.jsonLdDescription': 'Türkçe metin' });
+  assert.match(out, /"description": "Türkçe metin"/);
+  assert.match(out, /"name": "Nazlı Belgin"/);
+  assert.doesNotMatch(out, /English text/);
+});
+
+test('localizeJsonLd leaves the block alone when the key is absent', function () {
+  var html = '<script type="application/ld+json">{ "description": "English" }</script>';
+  assert.equal(transform.localizeJsonLd(html, {}), html);
+});
+
+test('localizeJsonLd output is still valid JSON', function () {
+  var html = '<script type="application/ld+json">\n' +
+    '{ "@type": "Person", "description": "English text" }\n</script>';
+  var out = transform.localizeJsonLd(html, { 'meta.jsonLdDescription': 'Ödül "x" & <y>' });
+  var body = out.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1];
+  assert.doesNotThrow(function () { JSON.parse(body); });
+  assert.equal(JSON.parse(body).description, 'Ödül "x" & <y>');
+});

@@ -93,10 +93,77 @@
     return out;
   }
 
+  var SITE = 'https://nazlibelgin.com/';
+  var LANGS = ['en', 'tr', 'ar'];
+  var LOCALES = { en: 'en_US', tr: 'tr_TR', ar: 'ar_AR' };
+
+  function urlFor(lang) {
+    return lang === 'en' ? SITE : SITE + lang + '/';
+  }
+
+  function hreflangBlock() {
+    var links = LANGS.map(function (lang) {
+      return '<link rel="alternate" hreflang="' + lang + '" href="' + urlFor(lang) + '">';
+    });
+    links.push('<link rel="alternate" hreflang="x-default" href="' + urlFor('en') + '">');
+    return links.join('\n');
+  }
+
+  function rewriteHead(html, lang) {
+    var openTag = lang === 'ar'
+      ? '<html lang="ar" dir="rtl">'
+      : '<html lang="' + lang + '">';
+
+    var out = html.replace(/<html[^>]*>/, openTag);
+
+    out = out.replace(
+      /(<link rel="canonical" href=")[^"]*(")/,
+      '$1' + urlFor(lang) + '$2'
+    );
+    out = out.replace(
+      /(<meta property="og:url" content=")[^"]*(")/,
+      '$1' + urlFor(lang) + '$2'
+    );
+    out = out.replace(
+      /(<meta property="og:locale" content=")[^"]*(")/,
+      '$1' + LOCALES[lang] + '$2'
+    );
+
+    return out.replace(
+      /(<link rel="canonical"[^>]*>)/,
+      '$1\n' + hreflangBlock()
+    );
+  }
+
+  // JSON-LD is a JSON document inside a <script> tag, so the element-text path
+  // above would destroy it. Parse, change one field, re-serialize.
+  function localizeJsonLd(html, dict) {
+    if (!Object.prototype.hasOwnProperty.call(dict, 'meta.jsonLdDescription')) {
+      return html;
+    }
+    return html.replace(
+      /(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/,
+      function (whole, open, body, close) {
+        var data;
+        try {
+          data = JSON.parse(body);
+        } catch (err) {
+          return whole;
+        }
+        data.description = dict['meta.jsonLdDescription'];
+        return open + '\n' + JSON.stringify(data, null, 2) + '\n' + close;
+      }
+    );
+  }
+
   return {
     collectKeys: collectKeys,
     parseAttrSpec: parseAttrSpec,
     applyTranslations: applyTranslations,
-    escapeText: escapeText
+    escapeText: escapeText,
+    rewriteHead: rewriteHead,
+    urlFor: urlFor,
+    localizeJsonLd: localizeJsonLd,
+    LANGS: LANGS
   };
 });
