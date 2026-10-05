@@ -21,10 +21,15 @@
     return clamp(-sectionTop / scrollDistance, 0, 1);
   }
 
-  function translationForProgress(progress, maxShift) {
+  // Under dir="rtl" the track starts at the right edge, so the shift that
+  // advances the strip runs the other way. Omitting `direction` keeps the
+  // original left-to-right behaviour.
+  function translationForProgress(progress, maxShift, direction) {
     if (!Number.isFinite(maxShift) || maxShift <= 0) return 0;
     var boundedProgress = clamp(progress, 0, 1);
-    return boundedProgress === 0 ? 0 : -boundedProgress * maxShift;
+    if (boundedProgress === 0) return 0;
+    var sign = direction === 'rtl' ? 1 : -1;
+    return sign * boundedProgress * maxShift;
   }
 
   var activeController = null;
@@ -35,6 +40,8 @@
     var track = document.getElementById('art-works-track');
     if (!section || !viewport || !track) return;
 
+    var direction = document.documentElement &&
+      document.documentElement.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr';
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     var hoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     var scrollDisclosures = [];
@@ -53,7 +60,7 @@
       frame = 0;
       if (!canPin()) return;
       var progress = progressFromPosition(section.getBoundingClientRect().top, scrollDistance);
-      var translation = translationForProgress(progress, maxShift);
+      var translation = translationForProgress(progress, maxShift, direction);
       var activeIndex = Math.round(progress * Math.max(0, scrollDisclosures.length - 1));
       track.style.transform = 'translate3d(' + translation + 'px, 0, 0)';
       Array.prototype.forEach.call(scrollDisclosures, function (disclosure, index) {

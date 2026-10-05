@@ -290,3 +290,20 @@ test('content refresh wires new artist disclosures without duplicating existing 
   added.fire('toggle');
   assert.deepEqual(artists.map(function (item) { return item.open; }), [false, true]);
 });
+
+test('translationForProgress shifts left in ltr', function () {
+  assert.equal(scroll.translationForProgress(1, 500, 'ltr'), -500);
+});
+
+test('translationForProgress shifts right in rtl', function () {
+  assert.equal(scroll.translationForProgress(1, 500, 'rtl'), 500);
+});
+
+test('translationForProgress defaults to ltr when direction omitted', function () {
+  assert.equal(scroll.translationForProgress(1, 500), -500);
+});
+
+test('translationForProgress stays at zero on both directions at start', function () {
+  assert.equal(scroll.translationForProgress(0, 500, 'rtl'), 0);
+  assert.equal(scroll.translationForProgress(0, 500, 'ltr'), 0);
+});
