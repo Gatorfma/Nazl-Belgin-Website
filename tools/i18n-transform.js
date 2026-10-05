@@ -131,9 +131,17 @@
       '$1' + LOCALES[lang] + '$2'
     );
 
-    return out.replace(
+    out = out.replace(
       /(<link rel="canonical"[^>]*>)/,
       '$1\n' + hreflangBlock()
+    );
+
+    // Move aria-current onto this page's own language link.
+    out = out.replace(/(\sdata-lang-base="[^"]*") aria-current="true"/g, '$1');
+    return out.replace(
+      new RegExp('(hreflang="' + lang + '" lang="' + lang +
+                 '" data-lang-link data-lang-base="[^"]*")'),
+      '$1 aria-current="true"'
     );
   }
 

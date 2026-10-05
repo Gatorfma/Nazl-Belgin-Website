@@ -109,6 +109,42 @@ img { max-width: 100%; display: block; }
 }
 .nav__mark:hover { color: var(--red); }
 
+/* The wordmark and the language selector read as one identity block, so they
+   are grouped before .nav's space-between splits the bar. */
+.nav__brand {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(14px, 2vw, 26px);
+}
+
+.nav__langs {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.nav__langs a {
+  color: var(--mute);
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+  transition: color 240ms ease, border-color 240ms ease;
+}
+
+.nav__langs a:hover { color: var(--ink); }
+
+.nav__langs a[aria-current="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--blue);
+}
+
+.nav__langs a + a::before {
+  content: '·';
+  color: var(--line);
+  margin-inline-end: 10px;
+}
+
 .nav__links {
   display: flex;
   gap: clamp(14px, 2.2vw, 30px);

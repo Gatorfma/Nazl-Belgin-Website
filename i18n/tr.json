@@ -4,24 +4,19 @@
   "meta.twitterDescription": "Ankara'da yaşayan çağdaş ressam, üretimini Historia Art Studio çatısı altında sürdürüyor.",
   "meta.ogImageAlt": "Nazlı Belgin portresi",
   "meta.jsonLdDescription": "Ankara'da yaşayan, üretimini Historia Art Studio çatısı altında sürdüren çağdaş ressam. İşleri insanlık tarihinden, mitolojiden ve bilimsel düşüncenin görsel olanaklarından besleniyor; insan ve hayvan biçimlerini birleştiren melez figürler ironik, kimi zaman grotesk sahnelerde beliriyor.",
-
   "nav.skip": "Eserlere geç",
   "nav.paintings": "Resimler",
   "nav.manifesto": "Manifesto",
   "nav.biography": "Biyografi",
   "nav.contact": "İletişim",
-
   "hero.note": "Davetsiz gelen ve gitmelerine fırsat kalmadan resmedilen yaratıklar.",
-
   "work.sectionLabel": "Eserler",
   "work.heading": "Resimler",
   "work.seriesLabel": "Seri",
   "work.yearLabel": "Yıl",
   "work.noscript": "Eser arşivinin süzülüp görüntülenmesi için JavaScript gerekiyor. Sayfadaki diğer her şey JavaScript olmadan da okunur.",
-
   "artworks.youtubeTitle": "Nazlı Belgin'in YouTube videosu",
   "artworks.canvasTitle": "Canvas",
-
   "spotify.irmakLabel": "Irmak Akıncı eserleri",
   "spotify.feridunLabel": "Feridun Hürel eserleri",
   "spotify.humeyraLabel": "Hümeyra eserleri",
@@ -40,7 +35,6 @@
   "spotify.feridunAlt2": "Feridun Hürel için Spotify görseli, 2",
   "spotify.humeyraAlt1": "Hümeyra için Spotify görseli, 1",
   "spotify.humeyraAlt2": "Hümeyra için Spotify görseli, 2",
-
   "manifesto.beat1": "Yüzeyin altında ne varsa onu arıyorum.\nGüzelliği değil, yarayı anlatıyorum.",
   "manifesto.beat1._source": "I search for what lies beneath the surface.\nI speak of the wound, not of beauty.",
   "manifesto.beat2": "Renk benim itirazım; biçim, başkaldırım.\nFırçayı değil, içgüdüyü tutuyorum.\nİçimde biriken sesi boyayla dışarı salıyorum.",
@@ -61,7 +55,6 @@
   "manifesto.beat9._source": "I paint the inner eruption that has burned since the Stone Age.\nAs I look at the walls of the past, I tear down the walls of the present.",
   "manifesto.beat10": "Benim için sanat yeniden doğuş değil — yenilenmiş bir saldırıdır.",
   "manifesto.beat10._source": "For me, art is not rebirth — it is renewed attack.",
-
   "about.heading": "Biyografi",
   "about.lead": "Nazlı Belgin 1985'te Tekirdağ'da doğdu ve çocukluğundan bu yana sanatla ilgileniyor.",
   "about.origin": "Yolculuğu küçük yaşta kil figürler biçimlendirerek başladı; lisede resim öğretmeninin desteğiyle ilk heykel deneyimine dönüştü. Birlikte yaptıkları heykel hâlâ okul bahçesinde sergileniyor.",
@@ -70,7 +63,6 @@
   "about.practice": "Ankara'da yaşayan Belgin, üretimini Historia Art Studio çatısı altında sürdürüyor. İşleri insanlık tarihinden, mitolojiden ve bilimsel düşüncenin görsel olanaklarından besleniyor. Rengi ve biçimi anlatım aracı olarak kullanıyor, hem sezgisel hem düşünsel bir görsel dil kuruyor. Son çalışmalarında insan ve hayvan biçimlerini birleştiren melez figürler ironik, kimi zaman grotesk sahnelerde beliriyor.",
   "about.close": "Nazlı Belgin kişisel deneyimi tarihsel, bilimsel ve toplumsal katmanlarla birleştirerek çağdaş sanat alanında üretmeyi sürdürüyor.",
   "about.portraitAlt": "Nazlı Belgin portresi",
-
   "cv.exhibitions": "Seçilmiş Sergiler",
   "cv.projects": "Sanat Projeleri",
   "cv.fairs": "Sanat Fuarları",
@@ -89,7 +81,6 @@
   "cv.fa2": "Art Concept Sanat Fuarı — Historia Art Studio, Adana",
   "cv.fa3": "IAAF — 3K Galeri, İzmir",
   "cv.fa4": "Art Concept Sanat Fuarı — Historia Art Studio, Antalya",
-
   "contact.heading": "İletişim",
   "contact.invite": "Eserleri yakından görmek, üretim sürecine tanık olmak ve tanışmak için sizi Bilkent'teki stüdyoma davet ediyorum.",
   "contact.studioAddress": "Stüdyo: Üniversiteler Mah. 1597. Cad. Bilkent 1 Çamlık Sitesi D7/27, Çankaya / Ankara\nZiyaretler yalnızca randevuyla",
@@ -97,6 +88,6 @@
   "contact.fieldEmail": "E-posta",
   "contact.fieldMessage": "Mesaj",
   "contact.send": "Gönder",
-
-  "footer.copy": "Nazlı Belgin. Tüm eserler izinle çoğaltılmıştır."
+  "footer.copy": "Nazlı Belgin. Tüm eserler izinle çoğaltılmıştır.",
+  "nav.languageLabel": "Dil"
 }

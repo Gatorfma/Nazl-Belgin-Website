@@ -109,6 +109,27 @@ test('urlFor returns the root for English', function () {
   assert.equal(transform.urlFor('ar'), 'https://nazlibelgin.com/ar/');
 });
 
+var LANGS_FIXTURE = [
+  '<html lang="en">',
+  '<link rel="canonical" href="https://nazlibelgin.com/">',
+  '<div class="nav__langs">',
+  '<a href="/" hreflang="en" lang="en" data-lang-link data-lang-base="/" aria-current="true">EN</a>',
+  '<a href="/tr/" hreflang="tr" lang="tr" data-lang-link data-lang-base="/tr/">TR</a>',
+  '<a href="/ar/" hreflang="ar" lang="ar" data-lang-link data-lang-base="/ar/">AR</a>',
+  '</div></html>'
+].join('\n');
+
+test('rewriteHead marks the active language in the selector', function () {
+  var out = transform.rewriteHead(LANGS_FIXTURE, 'tr');
+  assert.match(out, /hreflang="tr" lang="tr" data-lang-link data-lang-base="\/tr\/" aria-current="true"/);
+});
+
+test('rewriteHead clears aria-current from the other languages', function () {
+  var out = transform.rewriteHead(LANGS_FIXTURE, 'ar');
+  assert.equal((out.match(/aria-current="true"/g) || []).length, 1);
+  assert.match(out, /hreflang="ar"[^>]*aria-current="true"/);
+});
+
 test('localizeJsonLd replaces only the description field', function () {
   var html = '<script type="application/ld+json">\n' +
     '{ "@type": "Person", "name": "Nazlı Belgin", "description": "English text" }\n' +

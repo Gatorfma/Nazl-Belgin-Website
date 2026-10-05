@@ -1324,6 +1324,7 @@
     watch($('films-grid'));
     render();
     wire();
+    if (window.NBLangSwitch) window.NBLangSwitch.wire(document, window);
     setupStudioAuth();
     startSlides();
     loadRemoteContent();

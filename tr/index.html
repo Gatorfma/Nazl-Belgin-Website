@@ -84,7 +84,14 @@
 <a class="skip" href="#art-works" data-i18n="nav.skip">Eserlere geç</a>
 
 <nav class="nav">
-  <a class="nav__mark" href="#top">Nazlı Belgin</a>
+  <div class="nav__brand">
+    <a class="nav__mark" href="#top">Nazlı Belgin</a>
+    <div class="nav__langs" data-i18n-attr="aria-label:nav.languageLabel" aria-label="Dil">
+      <a href="/" hreflang="en" lang="en" data-lang-link data-lang-base="/">EN</a>
+      <a href="/tr/" hreflang="tr" lang="tr" data-lang-link data-lang-base="/tr/" aria-current="true">TR</a>
+      <a href="/ar/" hreflang="ar" lang="ar" data-lang-link data-lang-base="/ar/">AR</a>
+    </div>
+  </div>
   <div class="nav__links">
     <a href="#work" data-i18n="nav.paintings">Resimler</a>
     <a href="#youtube">Youtube</a>
@@ -442,6 +449,7 @@
 <script src="/js/content-render.js?v=20260923-1"></script>
 <script src="/js/art-works-scroll.js?v=20260923-1"></script>
 <script src="/js/studio.js?v=20260923-1"></script>
+<script src="/js/lang-switch.js?v=20261005-1"></script>
 <script src="/js/site.js?v=20260923-1"></script>
 </body>
 </html>
