@@ -86,3 +86,19 @@ test('sitemap lists all three language URLs with alternates', function () {
   // four alternates on each of the three URLs
   assert.equal((xml.match(/xhtml:link rel="alternate"/g) || []).length, 12);
 });
+
+// Found by loading /ar/ in a browser, not by reading the diff: the build
+// absolutises asset paths in the HTML, but the fallback catalogue in
+// js/site.js carries relative 'art/...' paths. The same script runs on all
+// three pages, so from /tr/ and /ar/ those resolve to /tr/art/... and
+// /ar/art/... and every artwork 404s.
+test('no JS module references art/ with a relative path', function () {
+  ['site.js', 'content-render.js', 'content-model.js', 'studio.js'].forEach(function (name) {
+    var file = path.join(ROOT, 'js', name);
+    if (!fs.existsSync(file)) return;
+    var src = fs.readFileSync(file, 'utf8');
+    var hits = src.match(/['"]art\//g) || [];
+    assert.equal(hits.length, 0,
+      name + ' has ' + hits.length + " relative art/ path(s); they 404 from /tr/ and /ar/");
+  });
+});
