@@ -124,6 +124,33 @@ test('localizeJsonLd leaves the block alone when the key is absent', function ()
   assert.equal(transform.localizeJsonLd(html, {}), html);
 });
 
+// Review Focus: a key present in one language file but missing from another
+// must fail the build naming the key, not emit a half-translated page.
+test('validateKeys reports keys missing from the dictionary', function () {
+  var html = '<p data-i18n="a">x</p><meta data-i18n-attr="content:b" content="y">';
+  var result = transform.validateKeys(html, { a: 'A' });
+  assert.deepEqual(result.missing, ['b']);
+});
+
+test('validateKeys reports orphaned dictionary keys', function () {
+  var html = '<p data-i18n="a">x</p>';
+  var result = transform.validateKeys(html, { a: 'A', stale: 'S' });
+  assert.deepEqual(result.orphaned, ['stale']);
+});
+
+test('validateKeys ignores _source companion keys', function () {
+  var html = '<p data-i18n="a">x</p>';
+  var result = transform.validateKeys(html, { a: 'A', 'a._source': 'original' });
+  assert.deepEqual(result.orphaned, []);
+  assert.deepEqual(result.missing, []);
+});
+
+test('validateKeys passes when html and dictionary agree', function () {
+  var html = '<p data-i18n="a">x</p>';
+  assert.deepEqual(transform.validateKeys(html, { a: 'A' }),
+    { missing: [], orphaned: [] });
+});
+
 test('absolutizeAssets rewrites relative asset paths', function () {
   var html = '<link href="css/site.css?v=1"><script src="js/site.js"></script>' +
              '<img src="art/portrait/x.jpg"><link href="favicon.svg">';

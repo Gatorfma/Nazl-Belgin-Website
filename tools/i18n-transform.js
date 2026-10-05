@@ -156,6 +156,29 @@
     );
   }
 
+  // `foo._source` holds the English original beside a translation so the
+  // artist can review an adaptation. It is documentation, not a marker.
+  function isSourceKey(key) {
+    return /\._source$/.test(key);
+  }
+
+  function validateKeys(html, dict) {
+    var found = collectKeys(html);
+    var used = found.text.concat(found.attr).filter(function (key, index, list) {
+      return list.indexOf(key) === index;
+    }).sort();
+
+    var missing = used.filter(function (key) {
+      return !Object.prototype.hasOwnProperty.call(dict, key);
+    });
+
+    var orphaned = Object.keys(dict).filter(function (key) {
+      return !isSourceKey(key) && used.indexOf(key) === -1;
+    }).sort();
+
+    return { missing: missing, orphaned: orphaned };
+  }
+
   // The English page uses relative asset paths, which resolve to /tr/css/...
   // from a subdirectory and 404. Root-absolute works from all three locations.
   function absolutizeAssets(html) {
@@ -171,6 +194,7 @@
     applyTranslations: applyTranslations,
     escapeText: escapeText,
     absolutizeAssets: absolutizeAssets,
+    validateKeys: validateKeys,
     rewriteHead: rewriteHead,
     urlFor: urlFor,
     localizeJsonLd: localizeJsonLd,
