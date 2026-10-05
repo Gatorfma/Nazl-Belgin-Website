@@ -52,8 +52,51 @@
     return { text: unique(text), attr: unique(attr) };
   }
 
+  function escapeText(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function escapeAttr(value) {
+    return escapeText(value)
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function applyTranslations(html, dict) {
+    var out = html.replace(
+      /(<([a-zA-Z0-9-]+)\b[^>]*\sdata-i18n="([^"]+)"[^>]*>)([\s\S]*?)(<\/\2>)/g,
+      function (whole, open, tag, key, body, close) {
+        if (!Object.prototype.hasOwnProperty.call(dict, key)) return whole;
+        return open + escapeText(dict[key]) + close;
+      }
+    );
+
+    out = out.replace(
+      /<([a-zA-Z0-9-]+)\b([^>]*\sdata-i18n-attr="([^"]+)"[^>]*)>/g,
+      function (whole, tag, attrs, spec) {
+        var rewritten = attrs;
+        parseAttrSpec(spec).forEach(function (entry) {
+          if (!Object.prototype.hasOwnProperty.call(dict, entry.key)) return;
+          var pattern = new RegExp('(\\s' + entry.attribute + '=")[^"]*(")');
+          rewritten = rewritten.replace(
+            pattern,
+            '$1' + escapeAttr(dict[entry.key]).replace(/\$/g, '$$$$') + '$2'
+          );
+        });
+        return '<' + tag + rewritten + '>';
+      }
+    );
+
+    return out;
+  }
+
   return {
     collectKeys: collectKeys,
-    parseAttrSpec: parseAttrSpec
+    parseAttrSpec: parseAttrSpec,
+    applyTranslations: applyTranslations,
+    escapeText: escapeText
   };
 });

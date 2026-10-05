@@ -30,3 +30,37 @@ test('parseAttrSpec tolerates spaces', function () {
     { attribute: 'content', key: 'b.c' }
   ]);
 });
+
+test('applyTranslations replaces element text', function () {
+  var html = '<p data-i18n="hero.note">Hello</p>';
+  var out = transform.applyTranslations(html, { 'hero.note': 'Merhaba' });
+  assert.match(out, /<p data-i18n="hero\.note">Merhaba<\/p>/);
+});
+
+test('applyTranslations replaces attribute values', function () {
+  var html = '<meta data-i18n-attr="content:meta.description" content="English">';
+  var out = transform.applyTranslations(html, { 'meta.description': 'Türkçe' });
+  assert.match(out, /content="Türkçe"/);
+  assert.doesNotMatch(out, /English/);
+});
+
+// Review Focus: translated text containing HTML-special characters must be
+// escaped so it renders as characters and cannot inject markup.
+test('applyTranslations escapes special characters in text', function () {
+  var html = '<p data-i18n="k">x</p>';
+  var out = transform.applyTranslations(html, { k: 'Ödül & <Sergi>' });
+  assert.match(out, /Ödül &amp; &lt;Sergi&gt;/);
+  assert.doesNotMatch(out, /<Sergi>/);
+});
+
+test('applyTranslations escapes quotes in attribute values', function () {
+  var html = '<img data-i18n-attr="alt:k" alt="x">';
+  var out = transform.applyTranslations(html, { k: 'Nazlı\'nın "portresi"' });
+  assert.match(out, /alt="Nazlı&#39;nın &quot;portresi&quot;"/);
+});
+
+test('applyTranslations leaves unmarked elements untouched', function () {
+  var html = '<a class="nav__mark">Nazlı Belgin</a><p data-i18n="k">x</p>';
+  var out = transform.applyTranslations(html, { k: 'y' });
+  assert.match(out, /<a class="nav__mark">Nazlı Belgin<\/a>/);
+});
