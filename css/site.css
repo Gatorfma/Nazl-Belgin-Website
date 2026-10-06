@@ -96,6 +96,16 @@ img { max-width: 100%; display: block; }
   gap: 24px;
   flex-wrap: wrap;
   padding: 18px var(--pad-x);
+}
+
+/* The blur sits on a pseudo-element rather than on .nav itself. backdrop-filter
+   makes an element the containing block for its fixed descendants, which would
+   pin the mobile drawer to this bar instead of to the viewport. */
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: rgba(242, 237, 227, 0.82);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -119,13 +129,14 @@ img { max-width: 100%; display: block; }
 
 .nav__langs {
   display: flex;
-  gap: 10px;
+  gap: 20px;
   align-items: baseline;
   font-size: 11px;
   letter-spacing: 0.14em;
 }
 
 .nav__langs a {
+  position: relative;
   color: var(--mute);
   padding-bottom: 2px;
   border-bottom: 1px solid transparent;
@@ -139,10 +150,17 @@ img { max-width: 100%; display: block; }
   border-bottom-color: var(--blue);
 }
 
+/* The separator is positioned into the gap instead of sitting inside the
+   link's box. Inside it, the dot and its margin were part of the anchor, so
+   the label sat at the right-hand end of its own box and the active underline
+   ran out under the dot — which is why TR and AR looked shifted. */
 .nav__langs a + a::before {
   content: '·';
+  position: absolute;
+  left: -10px;
+  transform: translateX(-50%);
   color: var(--line);
-  margin-inline-end: 10px;
+  pointer-events: none;
 }
 
 .nav__links {
@@ -152,6 +170,12 @@ img { max-width: 100%; display: block; }
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+/* Mobile-only pieces. The drawer controls, the contact block inside the
+   drawer and its scrim have no place in the desktop header. */
+.nav__controls,
+.nav__contact,
+.nav__scrim { display: none; }
 .nav__links a { color: var(--body); }
 .nav__links a:hover { color: var(--red); }
 
@@ -849,17 +873,166 @@ img { max-width: 100%; display: block; }
 }
 
 @media (max-width: 720px) {
+  /* The header stops trying to fit everything on one line. The links move
+     into a side drawer and the language strip becomes a dropdown — both are
+     the same elements the desktop header uses, repositioned. */
   .nav {
     flex-wrap: nowrap;
     align-items: center;
+    gap: 12px;
   }
   .nav__mark { flex: 0 0 auto; }
+
+  /* The drawer is a later sibling, so without this it would paint over the
+     controls and bury the button that closes it. */
+  .nav__controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-inline-start: auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .nav__lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ink);
+  }
+
+  .nav__caret {
+    width: 0;
+    height: 0;
+    border-inline: 3.5px solid transparent;
+    border-top: 4px solid var(--mute);
+    transition: transform 240ms ease;
+  }
+  .nav__lang-toggle[aria-expanded="true"] .nav__caret { transform: rotate(180deg); }
+
+  .nav__burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .nav__burger-bar {
+    display: block;
+    height: 1px;
+    width: 100%;
+    background: var(--ink);
+    transition: transform 240ms var(--ease), opacity 180ms ease;
+  }
+  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(1) {
+    transform: translateY(5px) rotate(45deg);
+  }
+  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(2) { opacity: 0; }
+  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(3) {
+    transform: translateY(-5px) rotate(-45deg);
+  }
+
+  /* The language strip becomes a dropdown under the controls. It is absolutely
+     positioned against .nav, so it lands on the right regardless of sitting in
+     the brand block in the markup. */
+  .nav__langs {
+    position: absolute;
+    z-index: 3;
+    top: 100%;
+    inset-inline-end: var(--pad-x);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    min-width: 104px;
+    padding: 4px 0;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 180ms ease, transform 180ms var(--ease), visibility 180ms;
+  }
+  .nav__langs.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  .nav__langs a {
+    padding: 11px 16px;
+    text-align: center;
+    border-bottom: none;
+  }
+  .nav__langs a[aria-current="true"] {
+    color: var(--ink);
+    background: rgba(43, 47, 196, 0.06);
+  }
+  .nav__langs a + a::before { content: none; }
+
+  /* The links become the drawer. */
   .nav__links {
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
+    position: fixed;
+    z-index: 1;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: min(78vw, 320px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 88px var(--pad-x) 36px;
+    background: var(--bg);
+    border-inline-start: 1px solid var(--line);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(100%);
+    transition: transform 320ms var(--ease);
+  }
+  [dir="rtl"] .nav__links { transform: translateX(-100%); }
+  .nav__links.is-open { transform: none; }
+
+  .nav__links > a {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+
+  .nav__contact {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+  }
+  .nav__contact a {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--blue);
+    /* An address is a Latin run. Without isolation the leading '@' is a
+       neutral character and RTL moves it to the far end, so the handle reads
+       as "art.nazlibelgin@". */
+    unicode-bidi: isolate;
+    direction: ltr;
+    text-align: start;
+  }
+
+  /* Below .nav (40) so the drawer stays above it, above the grain layer (9). */
+  .nav__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 38;
+    background: rgba(22, 21, 26, 0.38);
   }
 
   .artworks { height: auto !important; }

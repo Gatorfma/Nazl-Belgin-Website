@@ -87,21 +87,41 @@
 <nav class="nav">
   <div class="nav__brand">
     <a class="nav__mark" href="#top">Nazlı Belgin</a>
-    <div class="nav__langs" data-i18n-attr="aria-label:nav.languageLabel" aria-label="Dil">
+    <div class="nav__langs" id="nav-langs" data-i18n-attr="aria-label:nav.languageLabel" aria-label="Dil">
       <a href="/" hreflang="en" lang="en" data-lang-link data-lang-base="/">EN</a>
       <a href="/tr/" hreflang="tr" lang="tr" data-lang-link data-lang-base="/tr/" aria-current="true">TR</a>
       <a href="/ar/" hreflang="ar" lang="ar" data-lang-link data-lang-base="/ar/">AR</a>
     </div>
   </div>
-  <div class="nav__links">
+  <div class="nav__controls">
+    <button class="nav__lang-toggle" id="nav-lang-toggle" type="button"
+            aria-expanded="false" aria-controls="nav-langs"
+            data-i18n-attr="aria-label:nav.languageLabel" aria-label="Dil">
+      <span class="nav__lang-code" id="nav-lang-code">EN</span>
+      <span class="nav__caret" aria-hidden="true"></span>
+    </button>
+    <button class="nav__burger" id="nav-burger" type="button"
+            aria-expanded="false" aria-controls="nav-links"
+            data-i18n-attr="aria-label:nav.menuLabel" aria-label="Menü">
+      <span class="nav__burger-bar" aria-hidden="true"></span>
+      <span class="nav__burger-bar" aria-hidden="true"></span>
+      <span class="nav__burger-bar" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="nav__links" id="nav-links">
     <a href="#work" data-i18n="nav.paintings">Resimler</a>
     <a href="#youtube">Youtube</a>
     <a href="#spotify">Spotify</a>
     <a href="#manifesto" data-i18n="nav.manifesto">Manifesto</a>
     <a href="#about" data-i18n="nav.biography">Biyografi</a>
     <a href="#contact" data-i18n="nav.contact">İletişim</a>
+    <div class="nav__contact">
+      <a href="mailto:nazlibelgin@gmail.com">nazlibelgin@gmail.com</a>
+      <a href="https://instagram.com/art.nazlibelgin" rel="me noopener">@art.nazlibelgin</a>
+    </div>
   </div>
 </nav>
+<div class="nav__scrim" id="nav-scrim" hidden></div>
 
 <div class="page">
 
@@ -452,6 +472,7 @@
 <script src="/js/studio.js?v=20260923-1"></script>
 <script src="/js/lang-switch.js?v=20261005-1"></script>
 <script src="/js/i18n-terms.js?v=20261005-1"></script>
+<script src="/js/nav-drawer.js?v=20261006-1"></script>
 <script src="/js/site.js?v=20260923-1"></script>
 </body>
 </html>

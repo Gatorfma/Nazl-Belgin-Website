@@ -1336,6 +1336,27 @@
     });
   }
 
+  /* ---------- mobile navigation ---------- */
+
+  function setupNavDrawer() {
+    if (!window.NBNavDrawer) return;
+
+    var nav = window.NBNavDrawer.create({
+      drawer: $('nav-links'),
+      burger: $('nav-burger'),
+      langPanel: $('nav-langs'),
+      langButton: $('nav-lang-toggle'),
+      scrim: $('nav-scrim'),
+      body: document.body
+    });
+    if (!nav) return;
+
+    var code = $('nav-lang-code');
+    if (code) code.textContent = window.NBNavDrawer.activeLangLabel(document);
+
+    nav.wire(window);
+  }
+
   /* ---------- boot ---------- */
 
   function init() {
@@ -1345,6 +1366,7 @@
     render();
     wire();
     if (window.NBLangSwitch) window.NBLangSwitch.wire(document, window);
+    setupNavDrawer();
     setupStudioAuth();
     startSlides();
     loadRemoteContent();
