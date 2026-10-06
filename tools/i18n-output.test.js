@@ -25,14 +25,14 @@ test('arabic page is rtl, turkish is not', function () {
 });
 
 test('every page carries reciprocal hreflang', function () {
-  ['tr', 'ar'].forEach(function (lang) {
+  transform.LANGS.filter(function (l) { return l !== 'en'; }).forEach(function (lang) {
     var html = page(lang);
-    ['en', 'tr', 'ar', 'x-default'].forEach(function (tag) {
+    transform.LANGS.concat('x-default').forEach(function (tag) {
       assert.match(html, new RegExp('hreflang="' + tag + '"'),
         lang + ' is missing hreflang ' + tag);
     });
   });
-  ['en', 'tr', 'ar', 'x-default'].forEach(function (tag) {
+  transform.LANGS.concat('x-default').forEach(function (tag) {
     assert.match(source, new RegExp('hreflang="' + tag + '"'),
       'the English page is missing hreflang ' + tag);
   });
@@ -44,14 +44,15 @@ test('canonical is self-referential on each page', function () {
 });
 
 test('no relative asset paths survive in generated pages', function () {
-  ['tr', 'ar'].forEach(function (lang) {
+  transform.LANGS.filter(function (l) { return l !== 'en'; }).forEach(function (lang) {
     assert.doesNotMatch(page(lang), /\s(href|src)="(css|js|art|favicon)/,
       lang + ' still has a relative asset path');
   });
 });
 
 test('each generated page marks exactly its own language', function () {
-  [['tr', 'tr'], ['ar', 'ar']].forEach(function (pair) {
+  transform.LANGS.filter(function (l) { return l !== 'en'; }).forEach(function (lang) {
+    var pair = [lang, lang];
     var html = page(pair[0]);
     assert.equal((html.match(/aria-current="true"/g) || []).length, 1);
     assert.match(html, new RegExp('hreflang="' + pair[1] + '"[^>]*aria-current="true"'));
@@ -61,7 +62,7 @@ test('each generated page marks exactly its own language', function () {
 // Review Focus: index.html edited without rebuilding leaves tr/ and ar/
 // silently stale. Regenerating must reproduce the committed output exactly.
 test('generated pages are not stale against index.html', function () {
-  ['tr', 'ar'].forEach(function (lang) {
+  transform.LANGS.filter(function (l) { return l !== 'en'; }).forEach(function (lang) {
     var dict = JSON.parse(
       fs.readFileSync(path.join(ROOT, 'i18n', lang + '.json'), 'utf8'));
     var expected = transform.absolutizeAssets(
@@ -74,17 +75,20 @@ test('generated pages are not stale against index.html', function () {
   });
 });
 
-test('sitemap lists all three language URLs with alternates', function () {
+// Derived from LANGS rather than hard-coded, so adding a language does not
+// leave this test asserting yesterday's count.
+test('sitemap lists every language URL with alternates', function () {
   var xml = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
-  ['https://nazlibelgin.com/', 'https://nazlibelgin.com/tr/', 'https://nazlibelgin.com/ar/']
-    .forEach(function (url) {
-      assert.match(xml, new RegExp('<loc>' + url.replace(/[/.]/g, '\\$&') + '</loc>'),
-        'sitemap is missing ' + url);
-    });
-  assert.equal((xml.match(/<loc>/g) || []).length, 3);
+  transform.LANGS.forEach(function (lang) {
+    var url = transform.urlFor(lang);
+    assert.match(xml, new RegExp('<loc>' + url.replace(/[/.]/g, '\\$&') + '</loc>'),
+      'sitemap is missing ' + url);
+  });
+  assert.equal((xml.match(/<loc>/g) || []).length, transform.LANGS.length);
   assert.match(xml, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
-  // four alternates on each of the three URLs
-  assert.equal((xml.match(/xhtml:link rel="alternate"/g) || []).length, 12);
+  // every URL advertises each language plus x-default
+  assert.equal((xml.match(/xhtml:link rel="alternate"/g) || []).length,
+    transform.LANGS.length * (transform.LANGS.length + 1));
 });
 
 // Found by loading /ar/ in a browser, not by reading the diff: the build

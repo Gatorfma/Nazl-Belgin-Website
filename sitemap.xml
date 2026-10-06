@@ -4,12 +4,13 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://nazlibelgin.com/</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://nazlibelgin.com/"/>
     <xhtml:link rel="alternate" hreflang="tr" href="https://nazlibelgin.com/tr/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://nazlibelgin.com/ar/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://nazlibelgin.com/fr/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://nazlibelgin.com/"/>
     <image:image>
       <image:loc>https://nazlibelgin.com/art/darwin.jpg</image:loc>
@@ -185,22 +186,35 @@
   </url>
   <url>
     <loc>https://nazlibelgin.com/tr/</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://nazlibelgin.com/"/>
     <xhtml:link rel="alternate" hreflang="tr" href="https://nazlibelgin.com/tr/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://nazlibelgin.com/ar/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://nazlibelgin.com/fr/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://nazlibelgin.com/"/>
   </url>
   <url>
     <loc>https://nazlibelgin.com/ar/</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://nazlibelgin.com/"/>
     <xhtml:link rel="alternate" hreflang="tr" href="https://nazlibelgin.com/tr/"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://nazlibelgin.com/ar/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://nazlibelgin.com/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://nazlibelgin.com/"/>
+  </url>
+  <url>
+    <loc>https://nazlibelgin.com/fr/</loc>
+    <lastmod>2026-10-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://nazlibelgin.com/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://nazlibelgin.com/tr/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://nazlibelgin.com/ar/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://nazlibelgin.com/fr/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://nazlibelgin.com/"/>
   </url>
 </urlset>

@@ -144,3 +144,39 @@ test('untitledAlt keeps an unmapped series name', function () {
   assert.equal(terms.untitledAlt('New Series', 'tr'),
     'İsimsiz resim, New Series serisi');
 });
+
+test('translates series and medium into French', function () {
+  assert.equal(terms.translateTerm('series', 'Monsters', 'fr'), 'Monstres');
+  assert.equal(terms.translateTerm('series', 'Stone Hills', 'fr'), 'Collines de pierre');
+  assert.equal(terms.translateTerm('medium', 'Acrylic on canvas', 'fr'),
+    'Acrylique sur toile');
+});
+
+test('every series and contact message has a French translation', function () {
+  ['Monsters', 'Evolution', 'Stone Hills'].forEach(function (s) {
+    assert.notEqual(terms.translateTerm('series', s, 'fr'), s, s + ' has no French');
+  });
+  [
+    'Name, email and a message, please.',
+    'That email does not look right.',
+    'Please shorten the name or message before sending.',
+    'Received. A reply comes when the paint allows.',
+    'Too many notes were sent recently. Please wait ten minutes and try again.',
+    'That did not send. Please try again or use the email link beside the form.'
+  ].forEach(function (msg) {
+    assert.notEqual(terms.translateTerm('ui', msg, 'fr'), msg, 'no French for: ' + msg);
+  });
+});
+
+// French marks the plural, unlike Turkish, and "œuvre" is feminine.
+test('countLabel agrees in number in French', function () {
+  assert.equal(terms.countLabel(1, 'fr'), '1 œuvre');
+  assert.equal(terms.countLabel(41, 'fr'), '41 œuvres');
+  assert.equal(terms.countLabel(0, 'fr'), '0 œuvre');
+});
+
+test('untitledAlt reads as a sentence in French', function () {
+  assert.equal(terms.untitledAlt('Monsters', 'fr'),
+    'Peinture sans titre, série Monstres');
+  assert.equal(terms.untitledAlt('', 'fr'), 'Peinture sans titre');
+});

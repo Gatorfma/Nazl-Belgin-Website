@@ -262,9 +262,62 @@ img { max-width: 100%; display: block; }
   background: rgba(22, 21, 26, 0.38);
 }
 
-/* The compact language trigger is only needed where the inline strip does not
-   fit; on desktop the strip itself stays in the bar. */
-.nav__lang-toggle { display: none; }
+/* The language selector is a dropdown at every width: four languages inline
+   would crowd the bar, and one behaviour is easier to reason about than two. */
+.nav__lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.nav__caret {
+  width: 0;
+  height: 0;
+  border-inline: 3.5px solid transparent;
+  border-top: 4px solid var(--mute);
+  transition: transform 240ms ease;
+}
+.nav__lang-toggle[aria-expanded="true"] .nav__caret { transform: rotate(180deg); }
+
+.nav__langs {
+  position: absolute;
+  z-index: 3;
+  top: 100%;
+  inset-inline-end: var(--pad-x);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-width: 104px;
+  padding: 4px 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 180ms ease, transform 180ms var(--ease), visibility 180ms;
+}
+.nav__langs.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.nav__langs a {
+  padding: 11px 16px;
+  text-align: center;
+  border-bottom: none;
+}
+.nav__langs a[aria-current="true"] {
+  color: var(--ink);
+  background: rgba(43, 47, 196, 0.06);
+}
+.nav__langs a + a::before { content: none; }
 .nav__links a { color: var(--body); }
 .nav__links a:hover { color: var(--red); }
 
@@ -972,62 +1025,6 @@ img { max-width: 100%; display: block; }
   }
   .nav__mark { flex: 0 0 auto; }
 
-  /* Below the breakpoint the language strip turns into a dropdown beside the
-     menu button; above it, the strip stays inline in the bar. */
-  .nav__lang-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    padding: 6px 0;
-    cursor: pointer;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--ink);
-  }
-
-  .nav__caret {
-    width: 0;
-    height: 0;
-    border-inline: 3.5px solid transparent;
-    border-top: 4px solid var(--mute);
-    transition: transform 240ms ease;
-  }
-  .nav__lang-toggle[aria-expanded="true"] .nav__caret { transform: rotate(180deg); }
-
-  .nav__langs {
-    position: absolute;
-    z-index: 3;
-    top: 100%;
-    inset-inline-end: var(--pad-x);
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    min-width: 104px;
-    padding: 4px 0;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity 180ms ease, transform 180ms var(--ease), visibility 180ms;
-  }
-  .nav__langs.is-open {
-    opacity: 1;
-    visibility: visible;
-    transform: none;
-  }
-  .nav__langs a {
-    padding: 11px 16px;
-    text-align: center;
-    border-bottom: none;
-  }
-  .nav__langs a[aria-current="true"] {
-    color: var(--ink);
-    background: rgba(43, 47, 196, 0.06);
-  }
-  .nav__langs a + a::before { content: none; }
 
   .nav__links { width: min(78vw, 320px); padding-top: 88px; }
 

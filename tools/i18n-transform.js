@@ -129,8 +129,8 @@
   }
 
   var SITE = 'https://nazlibelgin.com/';
-  var LANGS = ['en', 'tr', 'ar'];
-  var LOCALES = { en: 'en_US', tr: 'tr_TR', ar: 'ar_AR' };
+  var LANGS = ['en', 'tr', 'ar', 'fr'];
+  var LOCALES = { en: 'en_US', tr: 'tr_TR', ar: 'ar_AR', fr: 'fr_FR' };
 
   function urlFor(lang) {
     return lang === 'en' ? SITE : SITE + lang + '/';

@@ -248,7 +248,7 @@ test('rewriteHead does not duplicate pre-existing hreflang links', function () {
   var out = transform.rewriteHead(withLinks, 'tr');
   assert.equal((out.match(/hreflang="en"/g) || []).length, 1);
   assert.equal((out.match(/hreflang="x-default"/g) || []).length, 1);
-  assert.equal((out.match(/rel="alternate"/g) || []).length, 4);
+  assert.equal((out.match(/rel="alternate"/g) || []).length, 5);
 });
 
 // Final review, Important #1: validateKeys only compares dictionary keys to
@@ -311,4 +311,25 @@ test('an unreachable duplicate occurrence shows up as a count shortfall', functi
   var html = '<p data-i18n="a">x</p><img data-i18n="a" src="y.png">';
   assert.equal(transform.countMarkers(html), 2);
   assert.equal(transform.substitute(html, { a: 'A' }).count, 1);
+});
+
+test('French is part of the language set', function () {
+  assert.deepEqual(transform.LANGS, ['en', 'tr', 'ar', 'fr']);
+  assert.equal(transform.urlFor('fr'), 'https://nazlibelgin.com/fr/');
+});
+
+test('rewriteHead gives French its own locale and canonical', function () {
+  var out = transform.rewriteHead(HEAD_FIXTURE, 'fr');
+  assert.match(out, /<html lang="fr">/);
+  assert.doesNotMatch(out, /dir="rtl"/);
+  assert.match(out, /content="fr_FR"/);
+  assert.match(out, /<link rel="canonical" href="https:\/\/nazlibelgin\.com\/fr\/">/);
+});
+
+test('every page advertises all five hreflang values', function () {
+  var out = transform.rewriteHead(HEAD_FIXTURE, 'fr');
+  ['en', 'tr', 'ar', 'fr', 'x-default'].forEach(function (tag) {
+    assert.match(out, new RegExp('hreflang="' + tag + '"'), 'missing ' + tag);
+  });
+  assert.equal((out.match(/rel="alternate"/g) || []).length, 5);
 });

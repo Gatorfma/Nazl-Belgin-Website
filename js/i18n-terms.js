@@ -24,66 +24,74 @@
    */
   var TERMS = {
     series: {
-      'Monsters': { tr: 'Canavarlar', ar: 'وحوش' },
-      'Evolution': { tr: 'Evrim', ar: 'تطور' },
-      'Stone Hills': { tr: 'Taş Tepeler', ar: 'تلال حجرية' }
+      'Monsters': { tr: 'Canavarlar', ar: 'وحوش', fr: 'Monstres' },
+      'Evolution': { tr: 'Evrim', ar: 'تطور', fr: 'Évolution' },
+      'Stone Hills': { tr: 'Taş Tepeler', ar: 'تلال حجرية', fr: 'Collines de pierre' }
     },
     medium: {
-      'Acrylic on canvas': { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش' },
+      'Acrylic on canvas': { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش', fr: 'Acrylique sur toile' },
 
       // Data-entry typos present in two rows. Mapped so the translated pages
       // show no stray English; delete once the database rows are corrected.
-      'Acrylic  on canvas': { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش' },
-      "Acryl'c on canvas": { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش' },
+      'Acrylic  on canvas': { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش', fr: 'Acrylique sur toile' },
+      "Acryl'c on canvas": { tr: 'Tuval üzerine akrilik', ar: 'أكريليك على قماش', fr: 'Acrylique sur toile' },
 
       // Values in the checked-in CATALOGUE fallback, shown before Supabase
       // answers and during an outage.
-      'Oil on canvas': { tr: 'Tuval üzerine yağlıboya', ar: 'زيت على قماش' },
+      'Oil on canvas': { tr: 'Tuval üzerine yağlıboya', ar: 'زيت على قماش', fr: 'Huile sur toile' },
       'Oil and oil stick on canvas': {
         tr: 'Tuval üzerine yağlıboya ve yağlı pastel',
-        ar: 'زيت وقلم زيتي على قماش'
+        ar: 'زيت وقلم زيتي على قماش',
+        fr: 'Huile et bâton à l\'huile sur toile'
       }
     },
 
     // Strings built in JS rather than marked in the HTML, so they cannot
     // carry a data-i18n attribute. Same mechanism, one place to look.
     ui: {
-      'Untitled': { tr: 'İsimsiz', ar: 'بدون عنوان' },
-      'All': { tr: 'Tümü', ar: 'الكل' },
+      'Untitled': { tr: 'İsimsiz', ar: 'بدون عنوان', fr: 'Sans titre' },
+      'All': { tr: 'Tümü', ar: 'الكل', fr: 'Toutes' },
       'Click anywhere to close': {
         tr: 'Kapatmak için herhangi bir yere tıklayın',
-        ar: 'انقر في أي مكان للإغلاق'
+        ar: 'انقر في أي مكان للإغلاق',
+        fr: 'Cliquez n\'importe où pour fermer'
       },
 
       // Contact form. This is the site's only conversion point, so a visitor
       // who mistypes an address must not be answered in a language they did
       // not choose.
-      'Sending…': { tr: 'Gönderiliyor…', ar: 'جارٍ الإرسال…' },
-      'Send': { tr: 'Gönder', ar: 'إرسال' },
-      'Sent — thank you': { tr: 'Gönderildi — teşekkürler', ar: 'تم الإرسال — شكرًا لك' },
+      'Sending…': { tr: 'Gönderiliyor…', ar: 'جارٍ الإرسال…', fr: 'Envoi en cours…' },
+      'Send': { tr: 'Gönder', ar: 'إرسال', fr: 'Envoyer' },
+      'Sent — thank you': { tr: 'Gönderildi — teşekkürler', ar: 'تم الإرسال — شكرًا لك', fr: 'Envoyé — merci' },
       'Name, email and a message, please.': {
         tr: 'Ad, e-posta ve bir mesaj gerekiyor.',
-        ar: 'الاسم والبريد الإلكتروني والرسالة مطلوبة.'
+        ar: 'الاسم والبريد الإلكتروني والرسالة مطلوبة.',
+        fr: 'Un nom, un e-mail et un message, s\'il vous plaît.'
       },
       'That email does not look right.': {
         tr: 'Bu e-posta adresi doğru görünmüyor.',
-        ar: 'يبدو أن البريد الإلكتروني غير صحيح.'
+        ar: 'يبدو أن البريد الإلكتروني غير صحيح.',
+        fr: 'Cette adresse e-mail semble incorrecte.'
       },
       'Please shorten the name or message before sending.': {
         tr: 'Göndermeden önce adı veya mesajı kısaltın.',
-        ar: 'يُرجى اختصار الاسم أو الرسالة قبل الإرسال.'
+        ar: 'يُرجى اختصار الاسم أو الرسالة قبل الإرسال.',
+        fr: 'Veuillez raccourcir le nom ou le message avant l\'envoi.'
       },
       'Received. A reply comes when the paint allows.': {
         tr: 'Alındı. Boya izin verdiğinde yanıt gelecek.',
-        ar: 'تم الاستلام. سيأتي الرد حين يسمح الطلاء.'
+        ar: 'تم الاستلام. سيأتي الرد حين يسمح الطلاء.',
+        fr: 'Bien reçu. La réponse viendra quand la peinture le permettra.'
       },
       'Too many notes were sent recently. Please wait ten minutes and try again.': {
         tr: 'Kısa sürede çok fazla mesaj gönderildi. On dakika bekleyip tekrar deneyin.',
-        ar: 'أُرسلت رسائل كثيرة مؤخرًا. يُرجى الانتظار عشر دقائق والمحاولة مرة أخرى.'
+        ar: 'أُرسلت رسائل كثيرة مؤخرًا. يُرجى الانتظار عشر دقائق والمحاولة مرة أخرى.',
+        fr: 'Trop de messages ont été envoyés récemment. Veuillez patienter dix minutes et réessayer.'
       },
       'That did not send. Please try again or use the email link beside the form.': {
         tr: 'Gönderilemedi. Tekrar deneyin ya da formun yanındaki e-posta bağlantısını kullanın.',
-        ar: 'لم يتم الإرسال. حاول مرة أخرى أو استخدم رابط البريد الإلكتروني بجانب النموذج.'
+        ar: 'لم يتم الإرسال. حاول مرة أخرى أو استخدم رابط البريد الإلكتروني بجانب النموذج.',
+        fr: 'L\'envoi a échoué. Réessayez ou utilisez le lien e-mail à côté du formulaire.'
       }
     }
   };
@@ -108,6 +116,9 @@
     if (lang === 'ar') {
       return 'لوحة بدون عنوان' + (name ? '، سلسلة ' + name : '');
     }
+    if (lang === 'fr') {
+      return 'Peinture sans titre' + (name ? ', série ' + name : '');
+    }
     return 'Untitled painting' + (name ? ', ' + name + ' series' : '');
   }
 
@@ -115,6 +126,8 @@
     var count = Number(n) || 0;
     if (lang === 'tr') return count + ' eser';
     if (lang === 'ar') return 'الأعمال: ' + count;
+    // French pluralises from two: zero takes the singular, unlike English.
+    if (lang === 'fr') return count + (count < 2 ? ' œuvre' : ' œuvres');
     return count + (count === 1 ? ' work' : ' works');
   }
 
