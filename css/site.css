@@ -163,19 +163,108 @@ img { max-width: 100%; display: block; }
   pointer-events: none;
 }
 
+/* The links live in a side drawer at every width, not just on mobile. The
+   bar keeps only the wordmark, the language strip and the menu button. */
 .nav__links {
+  position: fixed;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: min(78vw, 330px);
   display: flex;
-  gap: clamp(14px, 2.2vw, 30px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 92px var(--pad-x) 36px;
+  background: var(--bg);
+  border-inline-start: 1px solid var(--line);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  transform: translateX(100%);
+  transition: transform 320ms var(--ease);
+}
+[dir="rtl"] .nav__links { transform: translateX(-100%); }
+.nav__links.is-open { transform: none; }
+
+.nav__links > a {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
 }
 
-/* Mobile-only pieces. The drawer controls, the contact block inside the
-   drawer and its scrim have no place in the desktop header. */
-.nav__controls,
-.nav__contact,
-.nav__scrim { display: none; }
+/* The drawer is a later sibling than the controls, so without this it would
+   paint over the button that closes it. */
+.nav__controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-inline-start: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.nav__burger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.nav__burger-bar {
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: var(--ink);
+  transition: transform 240ms var(--ease), opacity 180ms ease;
+}
+.nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+.nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(2) { opacity: 0; }
+.nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
+.nav__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.nav__contact a {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--blue);
+  /* An address is a Latin run. Without isolation the leading '@' is a neutral
+     character and RTL moves it to the far end, so the handle would read as
+     "art.nazlibelgin@". */
+  unicode-bidi: isolate;
+  direction: ltr;
+  text-align: start;
+}
+
+/* Below .nav (40) so the drawer stays above it, above the grain layer (9). */
+.nav__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  background: rgba(22, 21, 26, 0.38);
+}
+
+/* The compact language trigger is only needed where the inline strip does not
+   fit; on desktop the strip itself stays in the bar. */
+.nav__lang-toggle { display: none; }
 .nav__links a { color: var(--body); }
 .nav__links a:hover { color: var(--red); }
 
@@ -883,17 +972,8 @@ img { max-width: 100%; display: block; }
   }
   .nav__mark { flex: 0 0 auto; }
 
-  /* The drawer is a later sibling, so without this it would paint over the
-     controls and bury the button that closes it. */
-  .nav__controls {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-inline-start: auto;
-    position: relative;
-    z-index: 2;
-  }
-
+  /* Below the breakpoint the language strip turns into a dropdown beside the
+     menu button; above it, the strip stays inline in the bar. */
   .nav__lang-toggle {
     display: flex;
     align-items: center;
@@ -916,36 +996,6 @@ img { max-width: 100%; display: block; }
   }
   .nav__lang-toggle[aria-expanded="true"] .nav__caret { transform: rotate(180deg); }
 
-  .nav__burger {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  .nav__burger-bar {
-    display: block;
-    height: 1px;
-    width: 100%;
-    background: var(--ink);
-    transition: transform 240ms var(--ease), opacity 180ms ease;
-  }
-  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(1) {
-    transform: translateY(5px) rotate(45deg);
-  }
-  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(2) { opacity: 0; }
-  .nav__burger[aria-expanded="true"] .nav__burger-bar:nth-child(3) {
-    transform: translateY(-5px) rotate(-45deg);
-  }
-
-  /* The language strip becomes a dropdown under the controls. It is absolutely
-     positioned against .nav, so it lands on the right regardless of sitting in
-     the brand block in the markup. */
   .nav__langs {
     position: absolute;
     z-index: 3;
@@ -979,61 +1029,7 @@ img { max-width: 100%; display: block; }
   }
   .nav__langs a + a::before { content: none; }
 
-  /* The links become the drawer. */
-  .nav__links {
-    position: fixed;
-    z-index: 1;
-    inset-block: 0;
-    inset-inline-end: 0;
-    width: min(78vw, 320px);
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 88px var(--pad-x) 36px;
-    background: var(--bg);
-    border-inline-start: 1px solid var(--line);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    transform: translateX(100%);
-    transition: transform 320ms var(--ease);
-  }
-  [dir="rtl"] .nav__links { transform: translateX(-100%); }
-  .nav__links.is-open { transform: none; }
-
-  .nav__links > a {
-    padding: 15px 0;
-    border-bottom: 1px solid var(--line);
-    font-size: 13px;
-  }
-
-  .nav__contact {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 28px;
-    padding-top: 22px;
-    border-top: 1px solid var(--line);
-  }
-  .nav__contact a {
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    text-transform: none;
-    color: var(--blue);
-    /* An address is a Latin run. Without isolation the leading '@' is a
-       neutral character and RTL moves it to the far end, so the handle reads
-       as "art.nazlibelgin@". */
-    unicode-bidi: isolate;
-    direction: ltr;
-    text-align: start;
-  }
-
-  /* Below .nav (40) so the drawer stays above it, above the grain layer (9). */
-  .nav__scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 38;
-    background: rgba(22, 21, 26, 0.38);
-  }
+  .nav__links { width: min(78vw, 320px); padding-top: 88px; }
 
   .artworks { height: auto !important; }
   .artworks__sticky {
